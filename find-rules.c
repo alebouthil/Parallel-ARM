@@ -115,8 +115,8 @@ int main(int argc, char **argv) {
   printf("triangle pruned \n");
   if (rank == 0) {
     for (int i = 0; i < 10; i++) {
-      printf("found pair %i,%i \n", frequent_pairs[i].elements[i],
-             frequent_pairs[i].elements[i]);
+      printf("found pair %i,%i \n", frequent_pairs[i].elements[0],
+             frequent_pairs[i].elements[1]);
     }
   }
 
