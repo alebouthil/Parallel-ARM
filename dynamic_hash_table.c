@@ -124,3 +124,12 @@ Pair *convert_table(HashTable *table, int *count) {
   *count = index;
   return pairs;
 }
+
+void clone_table(HashTable *dest, const HashTable *src) {
+    init_table(dest);
+    for (int i = 0; i < src->size; i++) {
+        if (src->entries[i].occupied) {
+            merge_exact(dest, src->entries[i].key, src->entries[i].count);
+        }
+    }
+}

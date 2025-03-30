@@ -56,6 +56,10 @@ int main(int argc, char **argv) {
 
   // Merge frequent ints and their supports into a single HashTable on master
   if (rank == 0) {
+
+    HashTable global_table;
+    clone_table(global_table, local_table);
+
     printf("#################### \n");
     printf("Total of %i transactions found \n", total_transactions);
     for (int i = 1; i < size; i++) {
@@ -91,8 +95,14 @@ int main(int argc, char **argv) {
                  // table still
   }
 
-
-
+  /* At this point, each proc contains a hashtable of all size 1 frequent
+   * itemsets in its chunk of the file. Master contains a hashtable of all size
+   * 1 frequent itemsets globally. Next we need to have each proc find all
+   * frequent itemsets of all size that exist locally in its chunk.
+   *
+   *
+   *
+   */
   MPI_Finalize();
 }
 // How to do initial input processing?

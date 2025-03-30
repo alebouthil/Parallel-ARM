@@ -61,7 +61,7 @@ int process_chunk(const char *filename, long split_points[], int rank,
   }
 
   // Local support threshold is based on the percentage of the file that this
-  // proc is responsible for. 
+  // proc is responsible for.
   float local_support = global_support * (split_points[rank] - ftell(fp)) /
                         get_file_size(filename);
 
@@ -100,6 +100,5 @@ int process_chunk(const char *filename, long split_points[], int rank,
       insert(frequent_table, local_table.entries[i].key);
     }
   }
-
   return lines; // Return # of transactions processed in local chunk
 }

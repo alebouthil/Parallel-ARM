@@ -32,5 +32,6 @@ void resize_table(HashTable *table);
 void free_table(HashTable *table);
 void merge_exact(HashTable *dest, int key, int count);
 Pair *convert_table(HashTable *src, int *count);
+void clone_table(HashTable *dest, const HashTable *src);
 
 #endif
