@@ -81,6 +81,8 @@ ItemSet *prune_triangle(TriangularMatrix *matrix, float local_support,
         is.support = support;
 
         results[count++] = is;
+        printf("Frequent pair %d,%d found after pruning \n", is.elements[0],
+               is.elements[1]);
       }
     }
   }
@@ -113,7 +115,6 @@ void check_pairs(TriangularMatrix *matrix, int *items, int count) {
       if (idx_i < idx_j) {
         int index = TRIANGULAR_INDEX(idx_i, idx_j, num_items);
         triangle[index]++;
-        printf("Placing %d,%d in triangle at %d", item_i, item_j, index);
       }
     }
   }
