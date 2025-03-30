@@ -89,7 +89,6 @@ int main(int argc, char **argv) {
     fseek(fp, split_points[rank - 1], SEEK_SET);
   } else {
     rewind(fp);
-    printf("%li \n", ftell(fp));
   }
 
   // Read each line, entering candidate pairs into triangle matrix
@@ -115,8 +114,7 @@ int main(int argc, char **argv) {
   printf("triangle pruned \n");
   if (rank == 0) {
     for (int i = 0; i < 10; i++) {
-      printf("found pair %i,%i \n", frequent_pairs[i].elements[0],
-             frequent_pairs[i].elements[1]);
+      printf("found pair {%d,%d} with support %f \n", frequent_pairs[i].elements[0], frequent_pairs[i].elements[1], frequent_pairs[i].support * 100);
     }
   }
 
