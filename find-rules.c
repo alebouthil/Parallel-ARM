@@ -57,8 +57,9 @@ int main(int argc, char **argv) {
   // Merge frequent ints and their supports into a single HashTable on master
   if (rank == 0) {
 
+    // Keep local frequency table available when creating master table
     HashTable global_table;
-    clone_table(global_table, local_table);
+    clone_table(&global_table, &local_table);
 
     printf("#################### \n");
     printf("Total of %i transactions found \n", total_transactions);
@@ -72,7 +73,7 @@ int main(int argc, char **argv) {
 
       // Add ints + counts to hashtable on proc 0
       for (int j = 0; j < num_pairs; j++) {
-        merge_exact(&local_table, tpairs[j].key, tpairs[j].count);
+        merge_exact(&global_table, tpairs[j].key, tpairs[j].count);
       }
       printf("Master has recieved %i pairs from proc %i \n", num_pairs, i);
       free(tpairs);
@@ -94,6 +95,7 @@ int main(int argc, char **argv) {
     free(pairs); // Pairs only used for communication, values available in local
                  // table still
   }
+
 
   /* At this point, each proc contains a hashtable of all size 1 frequent
    * itemsets in its chunk of the file. Master contains a hashtable of all size
