@@ -77,10 +77,11 @@ int main(int argc, char **argv) {
     printf("#################### \n");
     printf("Input processing complete \n");
     printf("#################### ");
-    printf("Beginning SON by performing Apriori on each processor");
+    printf("Beginning SON by performing Apriori on each processor \n");
   }
 
   TriangularMatrix local_tri = *build_tri_matrix(&local_table);
+  printf("Triangular matrix built \n");
 
   // Set file buffer for reading
   FILE *fp = fopen(argv[1], "r");
@@ -100,6 +101,7 @@ int main(int argc, char **argv) {
     }
     check_pairs(&local_tri, frequent_items, outcount);
   }
+  printf("Pairs generated \n");
 
   // Create list of supported pairs from triangle
   int valid_pairs;
