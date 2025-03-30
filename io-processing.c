@@ -60,13 +60,8 @@ int process_chunk(const char *filename, long split_points[], int rank,
     fseek(fp, split_points[rank - 1], SEEK_SET);
   }
 
-  // Local support threshold is based on the percentage of the file that this
-  // proc is responsible for.
-  float local_support = global_support * (split_points[rank] - ftell(fp)) /
-                        get_file_size(filename);
-
-  printf("Proc %i reading from %li to %li, checking for s > %f \n", rank, ftell(fp),
-         split_points[rank], local_support);
+  printf("Proc %i reading from %li to %li \n", rank, ftell(fp),
+         split_points[rank]);
   fflush(stdout);
 
   // Process file chunk to extract unique integers
@@ -91,6 +86,12 @@ int process_chunk(const char *filename, long split_points[], int rank,
     }
     memset(buffer, 0, sizeof(buffer));
   }
+
+  // Local support threshold is based on the percentage of the file that this
+  // proc is responsible for.
+  float local_support = global_support * ((split_points[rank] - ftell(fp)) /
+                                          get_file_size(filename));
+  printf("Proc %i has a local support of %f", rank, local_support);
 
   // Find support for each unique int, adding it to the output table if high
   // enough
