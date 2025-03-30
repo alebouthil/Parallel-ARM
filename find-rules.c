@@ -48,7 +48,6 @@ int main(int argc, char **argv) {
       process_chunk(argv[1], split_points, rank, &local_table, global_support);
   printf("Proc %i has finished processing %i lines in its file chunk \n", rank,
          local_transaction_count);
-  free(split_points);
 
   // Get total number of transactions
   int total_transactions;
@@ -90,6 +89,7 @@ int main(int argc, char **argv) {
     fseek(fp, split_points[rank - 1], SEEK_SET);
   } else {
     rewind(fp);
+    printf("%li \n", ftell(fp));
   }
 
   // Read each line, entering candidate pairs into triangle matrix
