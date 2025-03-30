@@ -32,6 +32,7 @@ typedef struct {
   HashValue value;
 } Pair;
 
+void sort_ids(HashTable *table, int *ids);
 void print_sample(const HashTable *table, int max_items, int rank);
 void init_table(HashTable *table, ValueType type);
 void insert(HashTable *table, int key);

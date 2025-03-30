@@ -151,3 +151,19 @@ void clone_table(HashTable *dest, const HashTable *src) {
     }
   }
 }
+
+int compare( const void* a, const void* b)
+{
+   int int_a = * ( (int*) a );
+   int int_b = * ( (int*) b );
+
+   // an easy expression for comparing
+   return (int_a > int_b) - (int_a < int_b);
+}
+
+void sort_ids(HashTable *table, int *ids) {
+  for (int i = 0; i <= table->count; i++) {
+    ids[i] = table->entries[i].key;
+  }
+  qsort(ids, table->count, sizeof(int), compare);
+}
