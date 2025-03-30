@@ -9,10 +9,10 @@ TriangularMatrix *build_tri_matrix(HashTable *frequent_items) {
   int n = frequent_items->count;
 
   // Step 1: Build item-to-index map
-  int *item_ids;
+  int* item_ids = malloc(frequent_items->count * sizeof(int));
   sort_ids(frequent_items, item_ids);
   int *item_to_index = malloc(MAX_ITEM_ID * sizeof(int));
-  int *index_to_item = malloc(MAX_ITEM_ID * sizeof(int));
+  int *index_to_item = malloc(n * sizeof(int));
   for (int i = 0; i < MAX_ITEM_ID; i++)
     item_to_index[i] = -1;
   for (int i = 0; i < n; i++) {
