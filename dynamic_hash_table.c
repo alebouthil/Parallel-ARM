@@ -161,7 +161,7 @@ int compare(const void *a, const void *b) {
 }
 
 void sort_ids(HashTable *table, int *ids) {
-  for (int i = 0; i <= table->count; i++) {
+  for (int i = 0; i < table->count; i++) {
     ids[i] = table->entries[i].key;
   }
   qsort(ids, table->count, sizeof(int), compare);
