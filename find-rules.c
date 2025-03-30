@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 
   // Each processor finds frequent ints, support and transaction counts
   HashTable local_table;
-  init_table(&local_table);
+  init_table(&local_table, FLOAT_TYPE);
   int local_transaction_count;
   local_transaction_count =
       process_chunk(argv[1], split_points, rank, &local_table, global_support);

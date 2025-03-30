@@ -52,7 +52,7 @@ int process_chunk(const char *filename, long split_points[], int rank,
 
   int lines = 0;
   HashTable local_table;
-  init_table(&local_table);
+  init_table(&local_table, INT_TYPE);
 
   // Cluster file system allows concurrent reads
   FILE *fp = fopen(filename, "r");
@@ -90,16 +90,16 @@ int process_chunk(const char *filename, long split_points[], int rank,
 
   // Local support threshold is based on the percentage of the file that this
   // proc is responsible for.
-  float local_support = global_support * ((split_points[rank] - fstart) /
+  float local_support = global_support * ((float)(split_points[rank] - fstart) /
                                           get_file_size(filename));
   printf("Proc %i has a local support of %f \n", rank, local_support);
 
   // Find support for each unique int, adding it to the output table if high
   // enough
   for (int i = 0; i <= local_table.count; i++) {
-    float support = local_table.entries[i].count / lines;
+    float support = (float)local_table.entries[i].value.i / lines;
     if (support >= local_support) {
-      insert(frequent_table, local_table.entries[i].key);
+      merge_exact(frequent_table, local_table.entries[i].key, support);
     }
   }
   return lines; // Return # of transactions processed in local chunk

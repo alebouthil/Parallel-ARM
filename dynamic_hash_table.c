@@ -2,10 +2,11 @@
 
 unsigned int hash(int key, int size) { return (unsigned int)key % size; }
 
-void init_table(HashTable *table) {
+void init_table(HashTable *table, ValueType type) {
   table->size = INITIAL_TABLE_SIZE;
   table->count = 0;
   table->entries = calloc(table->size, sizeof(HashEntry));
+  table->type = type;
 }
 
 void resize_table(HashTable *table) {
@@ -19,8 +20,8 @@ void resize_table(HashTable *table) {
   for (int i = 0; i < old_size; i++) {
     if (old_entries[i].occupied) {
       insert(table, old_entries[i].key);
-      table->entries[hash(old_entries[i].key, table->size)].count =
-          old_entries[i].count;
+      table->entries[hash(old_entries[i].key, table->size)].value =
+          old_entries[i].value;
     }
   }
 
@@ -33,8 +34,8 @@ void print_sample(const HashTable *table, int max_items, int rank) {
 
   for (int i = 0; i < table->size && printed < max_items; i++) {
     if (table->entries[i].occupied) {
-      printf("  key = %d, count = %d\n", table->entries[i].key,
-             table->entries[i].count);
+      printf("  key = %d, support = %f \n", table->entries[i].key,
+             table->entries[i].value.f);
       printed++;
     }
   }
@@ -47,6 +48,7 @@ void print_sample(const HashTable *table, int max_items, int rank) {
 }
 
 void insert(HashTable *table, int key) {
+  // Insert is only ever called by int type tables
   if ((float)table->count / table->size >= LOAD_FACTOR) {
     printf("resizing local table");
     resize_table(table);
@@ -55,7 +57,7 @@ void insert(HashTable *table, int key) {
   unsigned int index = hash(key, table->size);
   while (table->entries[index].occupied) {
     if (table->entries[index].key == key) {
-      table->entries[index].count++;
+      table->entries[index].value.i++;
       return;
     }
     index = (index + 1) % table->size;
@@ -63,15 +65,26 @@ void insert(HashTable *table, int key) {
 
   table->entries[index].occupied = 1;
   table->entries[index].key = key;
-  table->entries[index].count = 1;
+  table->entries[index].value.i = 1;
   table->count++;
 }
 
-int lookup(HashTable *table, int key) {
+int get_count(HashTable *table, int key) {
   unsigned int index = hash(key, table->size);
   while (table->entries[index].occupied) {
     if (table->entries[index].key == key) {
-      return table->entries[index].count;
+      return table->entries[index].value.i;
+    }
+    index = (index + 1) % table->size;
+  }
+  return 0;
+}
+
+float get_support(HashTable *table, int key) {
+  unsigned int index = hash(key, table->size);
+  while (table->entries[index].occupied) {
+    if (table->entries[index].key == key) {
+      return table->entries[index].value.f;
     }
     index = (index + 1) % table->size;
   }
@@ -83,9 +96,13 @@ void free_table(HashTable *table) {
   table->entries = NULL;
   table->size = 0;
   table->count = 0;
+  table->type = 0;
 }
 
-void merge_exact(HashTable *table, int key, int count) {
+void merge_exact(HashTable *table, int key, float input) {
+  // Merge exact is only ever called by float type tables
+  HashValue value;
+  value.f = input;
 
   if ((float)table->count / table->size >= LOAD_FACTOR) {
     resize_table(table);
@@ -94,7 +111,7 @@ void merge_exact(HashTable *table, int key, int count) {
   unsigned int index = hash(key, table->size);
   while (table->entries[index].occupied) {
     if (table->entries[index].key == key) {
-      table->entries[index].count += count;
+      table->entries[index].value.f += value.f;
       return;
     }
     index = (index + 1) % table->size;
@@ -102,7 +119,7 @@ void merge_exact(HashTable *table, int key, int count) {
 
   table->entries[index].occupied = 1;
   table->entries[index].key = key;
-  table->entries[index].count = count;
+  table->entries[index].value.f = value.f;
   table->count++;
 }
 
@@ -116,7 +133,7 @@ Pair *convert_table(HashTable *table, int *count) {
   for (int i = 0; i < table->size; i++) {
     if (table->entries[i].occupied) {
       pairs[index].key = table->entries[i].key;
-      pairs[index].count = table->entries[i].count;
+      pairs[index].count = table->entries[i].value.i;
       index++;
     }
   }
@@ -126,10 +143,10 @@ Pair *convert_table(HashTable *table, int *count) {
 }
 
 void clone_table(HashTable *dest, const HashTable *src) {
-    init_table(dest);
-    for (int i = 0; i < src->size; i++) {
-        if (src->entries[i].occupied) {
-            merge_exact(dest, src->entries[i].key, src->entries[i].count);
-        }
+  init_table(dest, src->type);
+  for (int i = 0; i < src->size; i++) {
+    if (src->entries[i].occupied) {
+      merge_exact(dest, src->entries[i].key, src->entries[i].value);
     }
+  }
 }
