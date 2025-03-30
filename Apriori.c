@@ -23,7 +23,7 @@ TriangularMatrix *build_tri_matrix(HashTable *frequent_items) {
   }
 
   // Step 2: Allocate matrix
-  int total_pairs = n * (n - 1) / 2;
+  int total_pairs = (n * (n - 1)) / 2;
   int *matrix = calloc(total_pairs, sizeof(int));
 
   // Step 3: Return wrapped matrix object
@@ -59,7 +59,7 @@ ItemSet *prune_triangle(TriangularMatrix *matrix, float support, int baskets,
   // Prune a triangular matrix, returning only supported pairs
   int *index_to_item = matrix->index_to_item_map;
   int n = matrix->num_items;
-  int total_pairs = n * (n - 1) / 2;
+  int total_pairs = (n * (n - 1)) / 2;
 
   ItemSet *results = malloc(total_pairs * sizeof(ItemSet));
   int count = 0;
