@@ -101,8 +101,6 @@ void free_table(HashTable *table) {
 }
 
 void merge_exact(HashTable *table, int key, HashValue value) {
-  // Merge exact is only ever called by float type tables
-
   if ((float)table->count / table->size >= LOAD_FACTOR) {
     resize_table(table);
   }
@@ -158,9 +156,13 @@ int compare(const void *a, const void *b) {
   return (int_a > int_b) - (int_a < int_b);
 }
 
-void sort_ids(HashTable *table, int *ids) {
-  for (int i = 0; i < table->count; i++) {
-    ids[i] = table->entries[i].key;
-  }
-  qsort(ids, table->count, sizeof(int), compare);
+void sort_ids(HashTable* table, int* ids) {
+    int count = 0;
+    for (int i = 0; i < table->size; i++) {
+        if (table->entries[i].occupied) {
+            ids[count++] = table->entries[i].key;
+        }
+    }
+    qsort(ids, count, sizeof(int), compare);
 }
+
