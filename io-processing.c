@@ -65,8 +65,8 @@ int process_chunk(const char *filename, long split_points[], int rank,
   float local_support = global_support * (split_points[rank] - ftell(fp)) /
                         get_file_size(filename);
 
-  printf("Proc %i reading from %li to %li \n", rank, ftell(fp),
-         split_points[rank]);
+  printf("Proc %i reading from %li to %li, checking for s > %f \n", rank, ftell(fp),
+         split_points[rank], local_support);
   fflush(stdout);
 
   // Process file chunk to extract unique integers
@@ -96,7 +96,7 @@ int process_chunk(const char *filename, long split_points[], int rank,
   // enough
   for (int i = 0; i <= local_table.count; i++) {
     float support = local_table.entries[i].count / lines;
-    if (support > local_support) {
+    if (support >= local_support) {
       insert(frequent_table, local_table.entries[i].key);
     }
   }

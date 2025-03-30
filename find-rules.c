@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
   split_points = (long *)malloc((size - 1) * sizeof(long));
   if (rank == 0) {
     printf("#################### \n");
-    printf("Begin input processing");
+    printf("Begin input processing \n");
     split_file(argv[1], split_points, size);
     printf("Split points generated \n");
     for (int i = 0; i <= size - 1; i++) {
@@ -81,8 +81,8 @@ int main(int argc, char **argv) {
     printf("#################### \n");
     printf("Master done merging \n");
     printf("Hashtable contains %i frequent integers from the file \n",
-           local_table.count);
-    print_sample(&local_table, 20, rank);
+           global_table.count);
+    print_sample(&global_table, 20, rank);
     printf("#################### \n");
     printf("Input processing complete");
 
@@ -90,8 +90,8 @@ int main(int argc, char **argv) {
     // Workers convert their tables into KVpairs, send to master
     int local_items;
     Pair *pairs = convert_table(&local_table, &local_items);
-    MPI_Send(&local_items, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-    MPI_Send(pairs, local_items * sizeof(Pair), MPI_BYTE, 0, 1, MPI_COMM_WORLD);
+    MPI_Send(&local_table.count, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    MPI_Send(pairs, local_table.count * sizeof(Pair), MPI_BYTE, 0, 1, MPI_COMM_WORLD);
     free(pairs); // Pairs only used for communication, values available in local
                  // table still
   }
