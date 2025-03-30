@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 
   // Each processor finds frequent ints, support and transaction counts
   HashTable local_table;
-  init_table(&local_table, FLOAT_TYPE);
+  init_table(&local_table, INT_TYPE);
   int local_transaction_count;
   local_transaction_count =
       process_chunk(argv[1], split_points, rank, &local_table, global_support);
@@ -56,55 +56,28 @@ int main(int argc, char **argv) {
 
   // Merge frequent ints and their supports into a single HashTable on master
   if (rank == 0) {
-
-    // Keep local frequency table available when creating master table
-    HashTable global_table;
-    clone_table(&global_table, &local_table);
-
     printf("#################### \n");
     printf("Total of %i transactions found \n", total_transactions);
-    for (int i = 1; i < size; i++) {
-      // Get number of unique ints found by each worker
-      int num_pairs;
-      MPI_Recv(&num_pairs, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      Pair *tpairs = malloc(num_pairs * sizeof(Pair));
-      MPI_Recv(tpairs, num_pairs * sizeof(Pair), MPI_BYTE, i, 1, MPI_COMM_WORLD,
-               MPI_STATUS_IGNORE);
-
-      // Add ints + counts to hashtable on proc 0
-      for (int j = 0; j < num_pairs; j++) {
-        merge_exact(&global_table, tpairs[j].key, tpairs[j].count);
-      }
-      printf("Master has recieved %i pairs from proc %i \n", num_pairs, i);
-      free(tpairs);
-    }
-    printf("#################### \n");
-    printf("Master done merging \n");
-    printf("Hashtable contains %i frequent integers from the file \n",
-           global_table.count);
-    print_sample(&global_table, 20, rank);
+    //    for (int i = 1; i < size; i++) {
+    //      // Get number of unique ints found by each worker
+    //      int num_pairs;
+    //      MPI_Recv(&num_pairs, 1, MPI_INT, i, 0, MPI_COMM_WORLD,
+    //      MPI_STATUS_IGNORE); Pair *tpairs = malloc(num_pairs * sizeof(Pair));
+    //      MPI_Recv(tpairs, num_pairs * sizeof(Pair), MPI_BYTE, i, 1,
+    //      MPI_COMM_WORLD,
+    //               MPI_STATUS_IGNORE);
+    //
+    //      // Add ints + counts to hashtable on proc 0
+    //      for (int j = 0; j < num_pairs; j++) {
+    //        merge_exact(&global_table, tpairs[j].key, tpairs[j].value.f);
+    //      }
+    //      printf("Master has recieved %i pairs from proc %i \n", num_pairs,
+    //      i); free(tpairs);
+    //    }
     printf("#################### \n");
     printf("Input processing complete \n");
-
-  } else {
-    // Workers convert their tables into KVpairs, send to master
-    int local_items;
-    Pair *pairs = convert_table(&local_table, &local_items);
-    MPI_Send(&local_table.count, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-    MPI_Send(pairs, local_table.count * sizeof(Pair), MPI_BYTE, 0, 1, MPI_COMM_WORLD);
-    free(pairs); // Pairs only used for communication, values available in local
-                 // table still
   }
 
-
-  /* At this point, each proc contains a hashtable of all size 1 frequent
-   * itemsets in its chunk of the file. Master contains a hashtable of all size
-   * 1 frequent itemsets globally. Next we need to have each proc find all
-   * frequent itemsets of all size that exist locally in its chunk.
-   *
-   *
-   *
-   */
   MPI_Finalize();
 }
 // How to do initial input processing?

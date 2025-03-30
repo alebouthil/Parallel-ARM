@@ -29,7 +29,7 @@ typedef struct {
 
 typedef struct {
   int key;
-  int count;
+  HashValue value;
 } Pair;
 
 void print_sample(const HashTable *table, int max_items, int rank);

@@ -94,13 +94,19 @@ int process_chunk(const char *filename, long split_points[], int rank,
                                           get_file_size(filename));
   printf("Proc %i has a local support of %f \n", rank, local_support);
 
-  // Find support for each unique int, adding it to the output table if high
-  // enough
+  /* Find support for each unique int, adding it to the output table if high
+   * enough. We calculate local support based on how many bytes of the file
+   * this proc is handling. Ever so slightly less accurate than line numbers
+   * but easier for us to do, and more efficient
+   */
   for (int i = 0; i <= local_table.count; i++) {
     float support = (float)local_table.entries[i].value.i / lines;
     if (support >= local_support) {
-      merge_exact(frequent_table, local_table.entries[i].key, support);
+      merge_exact(frequent_table, local_table.entries[i].key,
+                  lookup(&local_table, local_table.entries[i].key));
     }
   }
+  // Only keep table containing the frequent items
+  free_table(&local_table);
   return lines; // Return # of transactions processed in local chunk
 }
