@@ -25,15 +25,25 @@ typedef struct {
   float support;        // Support of the rule (joint probability)
 } AssociationRule;
 
+// Core functions for Apriori algorithm
 ItemSet *prune_triangle(TriangularMatrix *matrix, float support, int baskets,
                         int *out_count);
 int *extract_frequent(HashTable *frequent_items, char *basket, int *outcount);
 TriangularMatrix *build_tri_matrix(HashTable *frequent_items);
 void check_pairs(TriangularMatrix *matrix, int *items, int count);
 
-// Function to generate association rules from frequent itemsets
+// Helper functions
+int contains_item(int item, int *array, int size);
+float find_itemset_support(ItemSet *itemsets, int count, int *items, int size);
+float find_itemset_support_fixed(ItemSet *itemsets, int count, int *items, int size);
+int** get_all_subsets(int *set, int set_size, int subset_size, int *count);
+int* get_complement(int *set, int set_size, int *subset, int subset_size, int *result_size);
+
+// Rule generation functions
 AssociationRule *generate_rules(ItemSet *itemsets, int itemset_count, 
                               float min_confidence, int *rule_count);
+AssociationRule *generate_rules_fixed(ItemSet *itemsets, int itemset_count, 
+                                   float min_confidence, int *rule_count);
 
 // Function to free memory allocated for association rules
 void free_rules(AssociationRule *rules, int rule_count);
