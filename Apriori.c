@@ -113,9 +113,6 @@ void check_pairs(TriangularMatrix *matrix, int *items, int count) {
       if (idx_i < idx_j) {
         int index = TRIANGULAR_INDEX(idx_i, idx_j, num_items);
         triangle[index]++;
-      } else {
-        int index = TRIANGULAR_INDEX(idx_j, idx_i, num_items);
-        triangle[index]++;
       }
     }
   }
