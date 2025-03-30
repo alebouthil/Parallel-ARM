@@ -79,6 +79,7 @@ int main(int argc, char **argv) {
     printf("#################### ");
     printf("Beginning SON by performing Apriori on each processor \n");
   }
+  MPI_Barrier(MPI_COMM_WORLD);
 
   TriangularMatrix local_tri = *build_tri_matrix(&local_table);
   printf("Triangular matrix built \n");
@@ -110,6 +111,7 @@ int main(int argc, char **argv) {
   ItemSet *frequent_pairs;
   frequent_pairs = prune_triangle(&local_tri, local_support,
                                   local_transaction_count, &valid_pairs);
+  printf("triangle pruned");
   if (rank == 0) {
     for (int i = 0; i < 10; i++) {
       printf("found pair %i,%i", frequent_pairs[i].elements[i],
