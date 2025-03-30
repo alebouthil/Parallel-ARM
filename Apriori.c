@@ -54,7 +54,7 @@ int *extract_frequent(HashTable *frequent_items, char *basket, int *outcount) {
   return items;
 }
 
-ItemSet *prune_triangle(TriangularMatrix *matrix, float support, int baskets,
+ItemSet *prune_triangle(TriangularMatrix *matrix, float local_support, int baskets,
                         int *out_count) {
   // Prune a triangular matrix, returning only supported pairs
   int *index_to_item = matrix->index_to_item_map;
@@ -66,13 +66,13 @@ ItemSet *prune_triangle(TriangularMatrix *matrix, float support, int baskets,
 
   int *triangle = matrix->matrix;
 
-  int support_threshold_count = (int)ceil(support * baskets);
-
+    // Find support in chunk for each pair in the triangle matrix
+    // Output ItemSets of pairs with support >= local_support
   for (int i = 0; i < n - 1; i++) {
     for (int j = i + 1; j < n; j++) {
       int idx = TRIANGULAR_INDEX(i, j, n);
       float support = (float)triangle[idx] / baskets;
-      if (support >= support_threshold_count) {
+      if (support >= local_support) {
         ItemSet is;
         is.elements = malloc(2 * sizeof(int));
         is.elements[0] = index_to_item[i];
