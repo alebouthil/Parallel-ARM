@@ -5,7 +5,7 @@
 
 #define MAX_ITEM_ID 20000
 
-TriangularMatrix *build_triangular_matrix(HashTable *frequent_items) {
+TriangularMatrix *build_tri_matrix(HashTable *frequent_items) {
   int n = frequent_items->count;
 
   // Step 1: Build item-to-index map
