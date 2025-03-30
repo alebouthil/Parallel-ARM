@@ -35,7 +35,8 @@ typedef struct {
 void print_sample(const HashTable *table, int max_items, int rank);
 void init_table(HashTable *table, ValueType type);
 void insert(HashTable *table, int key);
-int lookup(HashTable *table, int key);
+int get_count(HashTable *table, int key);
+float get_support(HashTable *table, int key);
 void resize_table(HashTable *table);
 void free_table(HashTable *table);
 void merge_exact(HashTable *dest, int key, float input);

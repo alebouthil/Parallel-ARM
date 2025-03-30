@@ -103,7 +103,7 @@ int process_chunk(const char *filename, long split_points[], int rank,
     float support = (float)local_table.entries[i].value.i / lines;
     if (support >= local_support) {
       merge_exact(frequent_table, local_table.entries[i].key,
-                  lookup(&local_table, local_table.entries[i].key));
+                  get_count(&local_table, local_table.entries[i].key));
     }
   }
   // Only keep table containing the frequent items
