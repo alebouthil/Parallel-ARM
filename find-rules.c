@@ -536,7 +536,7 @@ int main(int argc, char **argv) {
     fprintf(metrics_file, "Total association rules,%d\n", metrics.total_rules);
     fclose(metrics_file);
   }
-  
+  MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();
   return 0;
 }
