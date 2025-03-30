@@ -83,7 +83,6 @@ int main(int argc, char **argv) {
   TriangularMatrix local_tri = *build_tri_matrix(&local_table);
 
   // Set file buffer for reading
-  long pos;
   FILE *fp = fopen(argv[1], "r");
   if (rank != 0) {
     fseek(fp, split_points[rank - 1], SEEK_SET);

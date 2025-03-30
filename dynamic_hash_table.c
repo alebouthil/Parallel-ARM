@@ -162,6 +162,7 @@ int compare( const void* a, const void* b)
 }
 
 void sort_ids(HashTable *table, int *ids) {
+  ids = malloc(table->count * sizeof(int));
   for (int i = 0; i <= table->count; i++) {
     ids[i] = table->entries[i].key;
   }
