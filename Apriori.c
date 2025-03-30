@@ -10,8 +10,11 @@
 TriangularMatrix *build_tri_matrix(HashTable *frequent_items) {
   int n = frequent_items->count;
 
+
+
+
   // Step 1: Build item-to-index map
-  int* item_ids = malloc(frequent_items->count * sizeof(int));
+  int* item_ids = malloc(n * sizeof(int));
   sort_ids(frequent_items, item_ids);
   int *item_to_index = malloc(MAX_ITEM_ID * sizeof(int));
   int *index_to_item = malloc(n * sizeof(int));
@@ -111,6 +114,7 @@ void check_pairs(TriangularMatrix *matrix, int *items, int count) {
 
       // Ensure i < j for triangular matrix
       if (idx_i < idx_j) {
+
         int index = TRIANGULAR_INDEX(idx_i, idx_j, num_items);
         triangle[index]++;
       }

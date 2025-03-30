@@ -100,10 +100,8 @@ void free_table(HashTable *table) {
   table->count = 0;
 }
 
-void merge_exact(HashTable *table, int key, float input) {
+void merge_exact(HashTable *table, int key, HashValue value) {
   // Merge exact is only ever called by float type tables
-  HashValue value;
-  value.f = input;
 
   if ((float)table->count / table->size >= LOAD_FACTOR) {
     resize_table(table);
@@ -112,7 +110,7 @@ void merge_exact(HashTable *table, int key, float input) {
   unsigned int index = hash(key, table->size);
   while (table->entries[index].occupied) {
     if (table->entries[index].key == key) {
-      table->entries[index].value.f += value.f;
+      table->entries[index].value.i += value.i;
       return;
     }
     index = (index + 1) % table->size;
@@ -120,7 +118,7 @@ void merge_exact(HashTable *table, int key, float input) {
 
   table->entries[index].occupied = 1;
   table->entries[index].key = key;
-  table->entries[index].value.f = value.f;
+  table->entries[index].value = value;
   table->count++;
 }
 
@@ -147,7 +145,7 @@ void clone_table(HashTable *dest, const HashTable *src) {
   init_table(dest, src->type);
   for (int i = 0; i < src->size; i++) {
     if (src->entries[i].occupied) {
-      merge_exact(dest, src->entries[i].key, src->entries[i].value.f);
+      merge_exact(dest, src->entries[i].key, src->entries[i].value);
     }
   }
 }

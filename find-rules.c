@@ -21,7 +21,6 @@ typedef struct {
   double rule_generation_time;
   double total_time;
   int total_transactions;
-  int total_frequent_items;
   int total_frequent_pairs;
   int total_frequent_itemsets;
   int total_rules;
@@ -198,23 +197,16 @@ int main(int argc, char **argv) {
   printf("Proc %i has finished processing %i lines in its file chunk \n", rank,
          local_transaction_count);
   metrics.frequent_items_time = MPI_Wtime() - phase_start;
-  metrics.total_frequent_items = local_table.count;
 
   // Get total number of transactions
   int total_transactions;
   MPI_Reduce(&local_transaction_count, &total_transactions, 1, MPI_INT, MPI_SUM,
              0, MPI_COMM_WORLD);
   metrics.total_transactions = total_transactions;
-
-  // Gather frequent items metrics
-  int total_frequent_items;
-  MPI_Reduce(&local_table.count, &total_frequent_items, 1, MPI_INT, MPI_SUM,
-             0, MPI_COMM_WORLD);
   
   if (rank == 0) {
     printf("#################### \n");
     printf("Total of %i transactions found \n", total_transactions);
-    printf("Total of %i frequent items found\n", total_frequent_items);
     printf("#################### \n");
     printf("Input processing complete \n");
     printf("#################### \n");
@@ -507,7 +499,6 @@ int main(int argc, char **argv) {
     fprintf(metrics_file, "Large itemset mining time (s),%.3f\n", metrics.large_itemset_time);
     fprintf(metrics_file, "Rule generation time (s),%.3f\n", metrics.rule_generation_time);
     fprintf(metrics_file, "Total transactions,%d\n", metrics.total_transactions);
-    fprintf(metrics_file, "Total frequent items,%d\n", total_frequent_items);
     fprintf(metrics_file, "Total frequent pairs,%d\n", metrics.total_frequent_pairs);
     fprintf(metrics_file, "Total frequent itemsets,%d\n", metrics.total_frequent_itemsets);
     fprintf(metrics_file, "Total association rules,%d\n", metrics.total_rules);
@@ -571,7 +562,6 @@ int main(int argc, char **argv) {
     printf("\n");
     printf("Dataset statistics:\n");
     printf("Total transactions: %d\n", metrics.total_transactions);
-    printf("Total frequent items: %d\n", total_frequent_items);
     printf("Total frequent pairs: %d\n", metrics.total_frequent_pairs);
     printf("Total frequent itemsets: %d\n", metrics.total_frequent_itemsets);
     printf("Total association rules: %d\n", metrics.total_rules);
