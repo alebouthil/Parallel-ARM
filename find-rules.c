@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
   if (rank != 0) {
     fseek(fp, split_points[rank - 1], SEEK_SET);
   } else {
-    fseek(fp, 0, SEEK_SET);
+    rewind(fp);
   }
 
   // Read each line, entering candidate pairs into triangle matrix
