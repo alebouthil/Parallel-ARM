@@ -111,7 +111,9 @@ int main(int argc, char **argv) {
   ItemSet *frequent_pairs;
   frequent_pairs = prune_triangle(&local_tri, local_support,
                                   local_transaction_count, &valid_pairs);
-  printf("triangle pruned \n");
+
+  printf("triangle pruned, %d pairs remaining on proc %d \n", valid_pairs, rank);
+
   if (rank == 0) {
     for (int i = 0; i < 10; i++) {
       printf("found pair {%d,%d} with support %f \n", frequent_pairs[i].elements[0], frequent_pairs[i].elements[1], frequent_pairs[i].support * 100);
