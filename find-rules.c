@@ -267,13 +267,19 @@ int main(int argc, char **argv) {
   printf("Proc %i: Triangle pruned, found %d valid pairs\n", rank, valid_pairs);
 
   // Initialize array for storing all frequent itemsets (pairs, triples, etc.)
-  int max_itemsets = valid_pairs * 10; // Initial guess
-  ItemSet *all_frequent_itemsets = malloc(max_itemsets * sizeof(ItemSet));
+  ItemSet *all_frequent_itemsets = NULL;
   int total_itemsets = 0;
+  int max_itemsets = 0;
   
-  // Copy the frequent pairs to the all_frequent_itemsets array
-  for (int i = 0; i < valid_pairs; i++) {
-    all_frequent_itemsets[total_itemsets++] = frequent_pairs[i];
+  // Only allocate and copy if there are valid pairs
+  if (valid_pairs > 0) {
+    max_itemsets = valid_pairs * 10; // Initial guess
+    all_frequent_itemsets = malloc(max_itemsets * sizeof(ItemSet));
+    
+    // Copy the frequent pairs to the all_frequent_itemsets array
+    for (int i = 0; i < valid_pairs; i++) {
+      all_frequent_itemsets[total_itemsets++] = frequent_pairs[i];
+    }
   }
   
   // Find larger itemsets (k > 2)
@@ -282,79 +288,85 @@ int main(int argc, char **argv) {
   int prev_start_idx = 0;
   int prev_count = valid_pairs;
   
-  while (prev_count > 0) {
-    int new_start_idx = total_itemsets;
-    int candidates_count = 0;
-    ItemSet *candidates = NULL;
-    
-    // 1. Generate candidate itemsets of size k+1
-    for (int i = prev_start_idx; i < prev_start_idx + prev_count - 1; i++) {
-      for (int j = i + 1; j < prev_start_idx + prev_count; j++) {
-        ItemSet *candidate = generate_candidate(&all_frequent_itemsets[i], 
-                                               &all_frequent_itemsets[j], k);
-        
-        if (candidate != NULL && has_frequent_subsets(candidate, all_frequent_itemsets, 
-                                                    total_itemsets, k)) {
-          // Add the candidate to our list
-          candidates = realloc(candidates, (candidates_count + 1) * sizeof(ItemSet));
-          candidates[candidates_count++] = *candidate;
-          free(candidate); // Free the container, but not the elements (copied above)
-        }
-      }
-    }
-    
-    if (candidates_count == 0) {
-      break; // No new candidates, we're done
-    }
-    
-    // 2. Count support for each candidate
-    // Reset file pointer to read the chunk again
-    fseek(fp, read_start, SEEK_SET);
-    
-    while (ftell(fp) < read_end && fgets(buffer, sizeof(buffer), fp) != NULL) {
-      int outcount;
-      int *frequent_items = extract_frequent(&local_table, buffer, &outcount);
+  // Only proceed if we have valid pairs to begin with
+  if (prev_count > 0) {
+    while (prev_count > 0) {
+      int new_start_idx = total_itemsets;
+      int candidates_count = 0;
+      ItemSet *candidates = NULL;
       
-      if (outcount >= k + 1) {
-        for (int i = 0; i < candidates_count; i++) {
-          if (is_subset(candidates[i].elements, candidates[i].size, 
-                       frequent_items, outcount)) {
-            candidates[i].support += 1.0 / local_transaction_count;
+      // 1. Generate candidate itemsets of size k+1
+      for (int i = prev_start_idx; i < prev_start_idx + prev_count - 1; i++) {
+        for (int j = i + 1; j < prev_start_idx + prev_count; j++) {
+          ItemSet *candidate = generate_candidate(&all_frequent_itemsets[i], 
+                                                &all_frequent_itemsets[j], k);
+          
+          if (candidate != NULL && has_frequent_subsets(candidate, all_frequent_itemsets, 
+                                                      total_itemsets, k)) {
+            // Add the candidate to our list
+            candidates = realloc(candidates, (candidates_count + 1) * sizeof(ItemSet));
+            candidates[candidates_count++] = *candidate;
+            free(candidate); // Free the container, but not the elements (copied above)
           }
         }
       }
       
-      free(frequent_items);
-    }
-    
-    // 3. Prune candidates based on support
-    int new_count = 0;
-    for (int i = 0; i < candidates_count; i++) {
-      if (candidates[i].support >= local_support) {
-        // Check if we need to resize all_frequent_itemsets
-        if (total_itemsets >= max_itemsets) {
-          max_itemsets *= 2;
-          all_frequent_itemsets = realloc(all_frequent_itemsets, 
-                                        max_itemsets * sizeof(ItemSet));
+      if (candidates_count == 0) {
+        if (candidates != NULL) {
+          free(candidates);
+        }
+        break; // No new candidates, we're done
+      }
+      
+      // 2. Count support for each candidate
+      // Reset file pointer to read the chunk again
+      fseek(fp, read_start, SEEK_SET);
+      
+      while (ftell(fp) < read_end && fgets(buffer, sizeof(buffer), fp) != NULL) {
+        int outcount;
+        int *frequent_items = extract_frequent(&local_table, buffer, &outcount);
+        
+        if (outcount >= k + 1) {
+          for (int i = 0; i < candidates_count; i++) {
+            if (is_subset(candidates[i].elements, candidates[i].size, 
+                        frequent_items, outcount)) {
+              candidates[i].support += 1.0 / local_transaction_count;
+            }
+          }
         }
         
-        // Add to frequent itemsets
-        all_frequent_itemsets[total_itemsets++] = candidates[i];
-        new_count++;
-      } else {
-        // Free memory for non-frequent candidates
-        free(candidates[i].elements);
+        free(frequent_items);
       }
+      
+      // 3. Prune candidates based on support
+      int new_count = 0;
+      for (int i = 0; i < candidates_count; i++) {
+        if (candidates[i].support >= local_support) {
+          // Check if we need to resize all_frequent_itemsets
+          if (total_itemsets >= max_itemsets) {
+            max_itemsets *= 2;
+            all_frequent_itemsets = realloc(all_frequent_itemsets, 
+                                          max_itemsets * sizeof(ItemSet));
+          }
+          
+          // Add to frequent itemsets
+          all_frequent_itemsets[total_itemsets++] = candidates[i];
+          new_count++;
+        } else {
+          // Free memory for non-frequent candidates
+          free(candidates[i].elements);
+        }
+      }
+      
+      // Update for next iteration
+      prev_start_idx = new_start_idx;
+      prev_count = new_count;
+      k++;
+      
+      free(candidates);
+      
+      printf("Proc %i: Found %d frequent itemsets of size %d\n", rank, new_count, k);
     }
-    
-    // Update for next iteration
-    prev_start_idx = new_start_idx;
-    prev_count = new_count;
-    k++;
-    
-    free(candidates);
-    
-    printf("Proc %i: Found %d frequent itemsets of size %d\n", rank, new_count, k);
   }
   
   metrics.large_itemset_time = MPI_Wtime() - phase_start;
@@ -388,14 +400,16 @@ int main(int argc, char **argv) {
       disp += local_itemset_counts[i];
     }
     
-    global_itemsets = malloc(total_all_itemsets * sizeof(ItemSet));
+    if (total_all_itemsets > 0) {
+      global_itemsets = malloc(total_all_itemsets * sizeof(ItemSet));
+    }
     printf("Master will receive %d total itemsets\n", total_all_itemsets);
   }
   
   // Note: We can't easily create an MPI datatype for ItemSet because it contains a pointer
   // For simplicity, we'll send each itemset's components individually
   
-  if (rank == 0) {
+  if (rank == 0 && total_all_itemsets > 0) {
     // Master process receives itemsets one by one
     int current_idx = 0;
     
@@ -421,7 +435,9 @@ int main(int argc, char **argv) {
     }
     
     printf("Master has received all %d itemsets\n", total_all_itemsets);
-  } else {
+  } else if (rank == 0) {
+    printf("Master has received 0 itemsets\n");
+  } else if (total_itemsets > 0) {
     // Worker processes send their itemsets
     for (int i = 0; i < total_itemsets; i++) {
       MPI_Send(&all_frequent_itemsets[i].size, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
@@ -434,9 +450,14 @@ int main(int argc, char **argv) {
   // Master process generates association rules
   if (rank == 0) {
     phase_start = MPI_Wtime();
-    int rule_count;
-    AssociationRule *rules = generate_rules(global_itemsets, total_all_itemsets, 
-                                          confidence_threshold, &rule_count);
+    int rule_count = 0;
+    AssociationRule *rules = NULL;
+    
+    if (total_all_itemsets > 0) {
+      rules = generate_rules(global_itemsets, total_all_itemsets, 
+                            confidence_threshold, &rule_count);
+    }
+    
     metrics.rule_generation_time = MPI_Wtime() - phase_start;
     metrics.total_rules = rule_count;
     
@@ -446,38 +467,76 @@ int main(int argc, char **argv) {
     printf("#################### \n");
     
     // Print top rules (limited to 10 for brevity)
-    int rules_to_print = (rule_count < 10) ? rule_count : 10;
-    printf("Top %d association rules:\n", rules_to_print);
-    
-    for (int i = 0; i < rules_to_print; i++) {
-      printf("Rule %d: ", i + 1);
-      print_rule(rules[i]);
+    if (rule_count > 0) {
+      int rules_to_print = (rule_count < 10) ? rule_count : 10;
+      printf("Top %d association rules:\n", rules_to_print);
+      
+      for (int i = 0; i < rules_to_print; i++) {
+        printf("Rule %d: ", i + 1);
+        print_rule(rules[i]);
+      }
+      
+      // Clean up rules
+      free_rules(rules, rule_count);
+    } else {
+      printf("No association rules found.\n");
     }
-    
-    // Clean up rules
-    free_rules(rules, rule_count);
     
     // Clean up global itemsets
-    for (int i = 0; i < total_all_itemsets; i++) {
-      free(global_itemsets[i].elements);
+    if (global_itemsets != NULL) {
+      for (int i = 0; i < total_all_itemsets; i++) {
+        if (global_itemsets[i].elements != NULL) {
+          free(global_itemsets[i].elements);
+        }
+      }
+      free(global_itemsets);
     }
-    free(global_itemsets);
-    free(local_itemset_counts);
-    free(itemset_displacements);
+    
+    if (local_itemset_counts != NULL) free(local_itemset_counts);
+    if (itemset_displacements != NULL) free(itemset_displacements);
+    
+    // Write metrics to CSV file for further analysis
+    FILE *metrics_file = fopen("performance_metrics.csv", "w");
+    fprintf(metrics_file, "Metric,Value\n");
+    fprintf(metrics_file, "Total execution time (s),%.3f\n", metrics.total_time);
+    fprintf(metrics_file, "File splitting time (s),%.3f\n", metrics.file_split_time);
+    fprintf(metrics_file, "Frequent items mining time (s),%.3f\n", metrics.frequent_items_time);
+    fprintf(metrics_file, "Triangle matrix build time (s),%.3f\n", metrics.triangle_matrix_build_time);
+    fprintf(metrics_file, "Pair generation time (s),%.3f\n", metrics.pair_generation_time);
+    fprintf(metrics_file, "Triangle pruning time (s),%.3f\n", metrics.triangle_prune_time);
+    fprintf(metrics_file, "Large itemset mining time (s),%.3f\n", metrics.large_itemset_time);
+    fprintf(metrics_file, "Rule generation time (s),%.3f\n", metrics.rule_generation_time);
+    fprintf(metrics_file, "Total transactions,%d\n", metrics.total_transactions);
+    fprintf(metrics_file, "Total frequent items,%d\n", total_frequent_items);
+    fprintf(metrics_file, "Total frequent pairs,%d\n", metrics.total_frequent_pairs);
+    fprintf(metrics_file, "Total frequent itemsets,%d\n", metrics.total_frequent_itemsets);
+    fprintf(metrics_file, "Total association rules,%d\n", metrics.total_rules);
+    fclose(metrics_file);
   }
   
-  // Clean up local resources
-  for (int i = 0; i < total_itemsets; i++) {
-    free(all_frequent_itemsets[i].elements);
+  // Clean up local resources with null checks
+  if (all_frequent_itemsets != NULL) {
+    for (int i = 0; i < total_itemsets; i++) {
+      if (all_frequent_itemsets[i].elements != NULL) {
+        free(all_frequent_itemsets[i].elements);
+      }
+    }
+    free(all_frequent_itemsets);
   }
-  free(all_frequent_itemsets);
-  free(frequent_pairs);
-  free(local_tri->matrix);
-  free(local_tri->item_to_index_map);
-  free(local_tri->index_to_item_map);
-  free(local_tri);
+  
+  if (frequent_pairs != NULL && valid_pairs > 0) {
+    free(frequent_pairs);
+  }
+  
+  if (local_tri != NULL) {
+    if (local_tri->matrix != NULL) free(local_tri->matrix);
+    if (local_tri->item_to_index_map != NULL) free(local_tri->item_to_index_map);
+    if (local_tri->index_to_item_map != NULL) free(local_tri->index_to_item_map);
+    free(local_tri);
+  }
+  
   free_table(&local_table);
-  free(split_points);
+  if (split_points != NULL) free(split_points);
   
   // Calculate total time
   end_time = MPI_Wtime();
@@ -517,26 +576,8 @@ int main(int argc, char **argv) {
     printf("Total frequent itemsets: %d\n", metrics.total_frequent_itemsets);
     printf("Total association rules: %d\n", metrics.total_rules);
     printf("#################### \n");
-    
-    // Write metrics to CSV file for further analysis
-    FILE *metrics_file = fopen("performance_metrics.csv", "w");
-    fprintf(metrics_file, "Metric,Value\n");
-    fprintf(metrics_file, "Total execution time (s),%.3f\n", metrics.total_time);
-    fprintf(metrics_file, "File splitting time (s),%.3f\n", metrics.file_split_time);
-    fprintf(metrics_file, "Frequent items mining time (s),%.3f\n", metrics.frequent_items_time);
-    fprintf(metrics_file, "Triangle matrix build time (s),%.3f\n", metrics.triangle_matrix_build_time);
-    fprintf(metrics_file, "Pair generation time (s),%.3f\n", metrics.pair_generation_time);
-    fprintf(metrics_file, "Triangle pruning time (s),%.3f\n", metrics.triangle_prune_time);
-    fprintf(metrics_file, "Large itemset mining time (s),%.3f\n", metrics.large_itemset_time);
-    fprintf(metrics_file, "Rule generation time (s),%.3f\n", metrics.rule_generation_time);
-    fprintf(metrics_file, "Total transactions,%d\n", metrics.total_transactions);
-    fprintf(metrics_file, "Total frequent items,%d\n", total_frequent_items);
-    fprintf(metrics_file, "Total frequent pairs,%d\n", metrics.total_frequent_pairs);
-    fprintf(metrics_file, "Total frequent itemsets,%d\n", metrics.total_frequent_itemsets);
-    fprintf(metrics_file, "Total association rules,%d\n", metrics.total_rules);
-    fclose(metrics_file);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  
   MPI_Finalize();
   return 0;
 }
