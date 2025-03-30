@@ -1,3 +1,4 @@
+#include "Apriori.h"
 #include "dynamic_hash_table.h"
 #include <mpi.h>
 #include <stdio.h>
@@ -54,7 +55,6 @@ int main(int argc, char **argv) {
   MPI_Reduce(&local_transaction_count, &total_transactions, 1, MPI_INT, MPI_SUM,
              0, MPI_COMM_WORLD);
 
-  // Merge frequent ints and their supports into a single HashTable on master
   if (rank == 0) {
     printf("#################### \n");
     printf("Total of %i transactions found \n", total_transactions);
@@ -76,25 +76,45 @@ int main(int argc, char **argv) {
     //    }
     printf("#################### \n");
     printf("Input processing complete \n");
+    printf("#################### ");
+    printf("Beginning SON by performing Apriori on each processor");
+  }
+
+  TriangularMatrix local_tri = *build_tri_matrix(&local_table);
+
+  // Set file buffer for reading
+  long pos;
+  FILE *fp = fopen(argv[1], "r");
+  if (rank != 0) {
+    fseek(fp, split_points[rank - 1], SEEK_SET);
+  } else {
+    fseek(fp, 0, SEEK_SET);
+  }
+
+  // Read each line, entering candidate pairs into triangle matrix
+  while (ftell(fp) < split_points[rank]) {
+    int outcount;
+    int *frequent_items = extract_frequent(
+        &local_table, get_line(fp, rank, split_points), &outcount);
+    if (outcount < 2) {
+      continue;
+    }
+    check_pairs(&local_tri, frequent_items, outcount);
+  }
+
+  // Create list of supported pairs from triangle
+  int valid_pairs;
+  float local_support =
+      global_support * ((float)local_transaction_count / total_transactions);
+  ItemSet *frequent_pairs;
+  frequent_pairs = prune_triangle(&local_tri, local_support,
+                                  local_transaction_count, &valid_pairs);
+  if (rank == 0) {
+    for (int i = 0; i < 10; i++) {
+      printf("found pair %i,%i", frequent_pairs[i].elements[i],
+             frequent_pairs[i].elements[i]);
+    }
   }
 
   MPI_Finalize();
 }
-// How to do initial input processing?
-//
-// Main reads every line of input file
-//  Keeps running count of # of transactions
-// Round robin distribution > Send each line to a different proc
-//  Each proc recieves line > add all items not yet seen to local list of
-//  items, keep running count
-//   Use 2 arrays, one for items one for counts. A[i] has count B[i]?
-// At end all procs send local list + count for master to merge
-//          vs
-// Master assigns procs chunks of input file > in order to do so evenly, would
-// need to go line by line anyways to get linecount Each proc works through
-// it's chunk, creates local list of unique ints and keeps running count #0(n
-// + (n^2)/p)#
-//  Use same 2 array strategy to keep counts
-//          vs
-// Master loops through entire file once, creates list of unique ints and
-// keeps counts   #0(n^2)#

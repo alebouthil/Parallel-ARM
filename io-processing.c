@@ -18,6 +18,16 @@ long get_file_size(const char *filename) {
   }
 }
 
+char *get_line(FILE *fp, int rank, long split_points[]) {
+  char buffer[2048];
+  if (ftell(fp) < split_points[rank]) {
+    return fgets(buffer, sizeof(buffer), fp);
+  } else {
+    perror("file reading too far");
+    return 0;
+  }
+}
+
 void split_file(const char *filename, long split_points[], int p) {
   // Fill array split(char **)NULL_points with byte values
   // Creates split points based on the number of processes
