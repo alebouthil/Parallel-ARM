@@ -1,6 +1,5 @@
 #include "dynamic_hash_table.h"
-#define TRIANGULAR_INDEX(i, j, n)                                              \
-  (((n) * (n - 1) - (n - (i)) * (n - (i) + 1)) / 2 + ((j) - (i)))
+#define TRIANGULAR_INDEX(i, j, n) ((i-n) * (n - (i/2))) + j - i
 
 typedef struct {
   int *matrix;            // counts for size-2 itemsets
