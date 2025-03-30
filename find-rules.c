@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
            global_table.count);
     print_sample(&global_table, 20, rank);
     printf("#################### \n");
-    printf("Input processing complete");
+    printf("Input processing complete \n");
 
   } else {
     // Workers convert their tables into KVpairs, send to master

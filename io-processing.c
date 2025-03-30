@@ -59,8 +59,9 @@ int process_chunk(const char *filename, long split_points[], int rank,
   if (rank != 0) {
     fseek(fp, split_points[rank - 1], SEEK_SET);
   }
+  long fstart = ftell(fp);
 
-  printf("Proc %i reading from %li to %li \n", rank, ftell(fp),
+  printf("Proc %i reading from %li to %li \n", rank, fstart,
          split_points[rank]);
   fflush(stdout);
 
@@ -89,9 +90,9 @@ int process_chunk(const char *filename, long split_points[], int rank,
 
   // Local support threshold is based on the percentage of the file that this
   // proc is responsible for.
-  float local_support = global_support * ((split_points[rank] - ftell(fp)) /
+  float local_support = global_support * ((split_points[rank] - fstart) /
                                           get_file_size(filename));
-  printf("Proc %i has a local support of %f", rank, local_support);
+  printf("Proc %i has a local support of %f \n", rank, local_support);
 
   // Find support for each unique int, adding it to the output table if high
   // enough
