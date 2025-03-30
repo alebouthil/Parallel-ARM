@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  int support = strtol(argv[2], NULL, 10);
+  float global_support = strtof(argv[2], NULL);
 
   // Split file into roughly equal sized portions for processing
   long *split_points = NULL;
@@ -39,12 +39,12 @@ int main(int argc, char **argv) {
   // Send split points to all processors
   MPI_Bcast(split_points, size, MPI_LONG, 0, MPI_COMM_WORLD);
 
-  // Each processor finds unique ints, frequency counts and transaction counts
+  // Each processor finds frequent ints, support and transaction counts
   HashTable local_table;
   init_table(&local_table);
   int local_transaction_count;
   local_transaction_count =
-      process_chunk(argv[1], split_points, rank, &local_table);
+      process_chunk(argv[1], split_points, rank, &local_table, global_support);
   printf("Proc %i has finished processing %i lines in its file chunk \n", rank,
          local_transaction_count);
   free(split_points);
@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
   MPI_Reduce(&local_transaction_count, &total_transactions, 1, MPI_INT, MPI_SUM,
              0, MPI_COMM_WORLD);
 
-  // Merge unique ints and their frequencies into a single HashTable on master
+  // Merge frequent ints and their supports into a single HashTable on master
   if (rank == 0) {
     printf("#################### \n");
     printf("Total of %i transactions found \n", total_transactions);
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
     }
     printf("#################### \n");
     printf("Master done merging \n");
-    printf("Hashtable contains %i unique integers from the file \n",
+    printf("Hashtable contains %i frequent integers from the file \n",
            local_table.count);
     print_sample(&local_table, 20, rank);
     printf("#################### \n");
@@ -87,11 +87,11 @@ int main(int argc, char **argv) {
     Pair *pairs = convert_table(&local_table, &local_items);
     MPI_Send(&local_items, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
     MPI_Send(pairs, local_items * sizeof(Pair), MPI_BYTE, 0, 1, MPI_COMM_WORLD);
-    // print_sample(&local_table, 20, rank);
-    free_table(
-        &local_table); // Free local hash tables, all values on proc 0 now
-    free(pairs);
+    free(pairs); // Pairs only used for communication, values available in local
+                 // table still
   }
+
+
 
   MPI_Finalize();
 }

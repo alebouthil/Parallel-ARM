@@ -45,12 +45,14 @@ void split_file(const char *filename, long split_points[], int p) {
 }
 
 int process_chunk(const char *filename, long split_points[], int rank,
-                  HashTable *table) {
+                  HashTable *frequent_table, float global_support) {
   // Process filename from split_points[rank] to split_points[rank + 1]
   // Returns the number of lines processed
-  // Fills hashtable with unique integer values and frequency
+  // Fills hashtable with frequent and unique integers as well as their support
 
   int lines = 0;
+  HashTable local_table;
+  init_table(&local_table);
 
   // Cluster file system allows concurrent reads
   FILE *fp = fopen(filename, "r");
@@ -58,10 +60,17 @@ int process_chunk(const char *filename, long split_points[], int rank,
     fseek(fp, split_points[rank - 1], SEEK_SET);
   }
 
+  // Local support threshold is based on the percentage of the file that this
+  // proc is responsible for. 
+  float local_support = global_support * (split_points[rank] - ftell(fp)) /
+                        get_file_size(filename);
+
   printf("Proc %i reading from %li to %li \n", rank, ftell(fp),
          split_points[rank]);
   fflush(stdout);
 
+  // Process file chunk to extract unique integers
+  // Fills local_table with all unique integers and their frequency
   char buffer[2048];
   while (ftell(fp) < split_points[rank] &&
          fgets(buffer, sizeof(buffer), fp) != NULL) {
@@ -76,11 +85,21 @@ int process_chunk(const char *filename, long split_points[], int rank,
       long num =
           strtol(token, &endptr, 10); // Convert string read into a number
       if (*endptr == '\0') {
-        insert(table, (int)num); // Insert number into hashtable
+        insert(&local_table, (int)num); // Insert number into hashtable
       }
       token = strtok(NULL, " \t\r\n");
     }
     memset(buffer, 0, sizeof(buffer));
   }
+
+  // Find support for each unique int, adding it to the output table if high
+  // enough
+  for (int i = 0; i <= local_table.count; i++) {
+    float support = local_table.entries[i].count / lines;
+    if (support > local_support) {
+      insert(frequent_table, local_table.entries[i].key);
+    }
+  }
+
   return lines; // Return # of transactions processed in local chunk
 }
