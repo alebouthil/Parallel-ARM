@@ -2,14 +2,14 @@
 #define TRIANGULAR_INDEX(i, j, n) ((i - n) * (n - (i / 2))) + j - i
 
 typedef struct {
-  int *matrix;            // counts for size-2 itemsets
-  int num_items;          // number of frequent items
-  int *item_to_index_map; // maps item IDs to dense matrix indices
-  int *index_to_item_map; // (optional) inverse lookup
+  int *matrix;            // Frequency counts for pairs
+  int num_items;          // Total number of frequent items
+  int *item_to_index_map; // Maps item IDs to dense matrix indices
+  int *index_to_item_map; // Inverse lookup to retrieve items
 } TriangularMatrix;
 
 typedef struct {
-  int *elements;
+  int *elements; // Elements of an itemset
   int size;
   float support;
 } ItemSet;
