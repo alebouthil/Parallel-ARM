@@ -40,7 +40,7 @@ int get_count(HashTable *table, int key);
 float get_support(HashTable *table, int key);
 void resize_table(HashTable *table);
 void free_table(HashTable *table);
-void merge_exact(HashTable *dest, int key, float input);
+void merge_exact(HashTable *dest, int key, HashValue value_in);
 Pair *convert_table(HashTable *src, int *count);
 void clone_table(HashTable *dest, const HashTable *src);
 
