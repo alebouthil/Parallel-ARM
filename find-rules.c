@@ -370,8 +370,7 @@ int main(int argc, char **argv) {
 
   // Get total number of transactions
   int total_transactions;
-  MPI_Reduce(&local_transaction_count, &total_transactions, 1, MPI_INT, MPI_SUM,
-             0, MPI_COMM_WORLD);
+  MPI_Allreduce(&local_transaction_count, &total_transactions, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
   metrics.total_transactions = total_transactions;
 
   // Gather frequent items metrics
