@@ -275,7 +275,7 @@ int main(int argc, char **argv) {
     }
 
     while (prev_count > 0) {
-      int new_start_idx = total_itemsets;
+      //      int new_start_idx = total_itemsets;
       int candidates_count = 0;
       ItemSet *candidates = NULL;
 
@@ -622,7 +622,7 @@ int main(int argc, char **argv) {
       key->items = malloc(key->length * sizeof(int));
 
       for (int j = 0; j < global_itemsets[i].size; j++) {
-        key.items[j] = global_itemsets[i].elements[j];
+        key->items[j] = global_itemsets[i].elements[j];
       }
       // Place itemset into hashtable, free key and items for next itemset
       insert_itemset(&unique_itemsets, key, global_itemsets[i].support);
@@ -643,7 +643,7 @@ int main(int argc, char **argv) {
     if (total_all_itemsets > 0) {
       // Use the fixed rule generation function
       rules = generate_rules_fixed(global_itemsets, total_all_itemsets,
-                                   confidence_threshold, &rule_count);
+                                   confidence_threshold, &rule_count, &unique_itemsets);
     }
 
     metrics.rule_generation_time = MPI_Wtime() - phase_start;
