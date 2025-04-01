@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
   if (rank == 0) {
     printf("#################### \n");
     printf("Total of %i transactions found \n", total_transactions);
-    printf("Total of %i frequent items found\n", total_frequent_items);
+    printf("Total of %i frequent items found (not unique)\n", total_frequent_items);
     printf("#################### \n");
     printf("Input processing complete \n");
     printf("#################### \n");
