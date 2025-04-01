@@ -445,6 +445,7 @@ int main(int argc, char **argv) {
   metrics.total_frequent_itemsets = total_itemsets;
 
   MPI_Barrier(MPI_COMM_WORLD); // Barrier after itemset generation
+  printf("Itemset generation complete \n");
 
   // Share frequent itemsets with master process
   int *local_itemset_counts = NULL;
