@@ -574,12 +574,12 @@ int main(int argc, char **argv) {
 
     // Update the actual count of received itemsets
     total_all_itemsets = current_idx;
-    printf("Master has received %d unique itemsets\n", total_all_itemsets);
+    printf("Master has %d unique itemsets after merging from worker procs \n", total_all_itemsets);
 
     // Debug: Print some sample itemsets
     if (total_all_itemsets > 0) {
       printf("DEBUG: Sample of global itemsets:\n");
-      int to_print = (total_all_itemsets < 5) ? total_all_itemsets : 5;
+      int to_print = (total_all_itemsets < 20) ? total_all_itemsets : 20;
       for (int i = 0; i < to_print; i++) {
         printf("  Itemset %d (size %d, support %.4f): {", i,
                global_itemsets[i].size, global_itemsets[i].support);
