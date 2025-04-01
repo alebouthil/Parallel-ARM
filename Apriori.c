@@ -8,6 +8,13 @@
 
 #define MAX_ITEM_ID 20000
 
+static inline int get_triangle_index(int i, int j, int n) {
+    if (i == j) return -1; // Diagonal isn't stored
+    if (i > j) { int tmp = i; i = j; j = tmp; }
+//   (((n) * (n - 1) - (n - (i)) * (n - (i) + 1)) / 2 + ((j) - (i)))
+    return (n * (n - 1) - (n - i) * (n - i + 1)) / 2 + (j - i - 1);
+}
+
 TriangularMatrix *build_tri_matrix(HashTable *frequent_items) {
   if (frequent_items == NULL || frequent_items->count <= 0) {
     return NULL;
@@ -140,7 +147,7 @@ ItemSet *prune_triangle(TriangularMatrix *matrix, float support, int baskets,
 
   for (int i = 0; i < n - 1; i++) {
     for (int j = i + 1; j < n; j++) {
-      int idx = TRIANGULAR_INDEX(i, j, n);
+      int idx = get_triangle_index(i, j, n);
 
       assert(idx >= 0 && idx < (n * (n - 1)) / 2);
 
@@ -224,7 +231,7 @@ int check_pairs(TriangularMatrix *matrix, int *items, int count) {
 
       // Ensure i < j for triangular matrix
       if (idx_i < idx_j) {
-        int index = TRIANGULAR_INDEX(idx_i, idx_j, num_items);
+        int index = get_triangle_index(idx_i, idx_j, num_items);
 
         assert(index >= 0 && index < (num_items * (num_items - 1)) / 2);
 
