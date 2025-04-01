@@ -628,13 +628,11 @@ int main(int argc, char **argv) {
       free(key->items);
       free(key);
     }
-  }
 
-  // At this point, Master has a hashtable containing all frequent itemsets in
-  // the dataset. This contains only unique itemsets, and each itemset has a
-  // count and support associated with it. Master process generates
-  // association rules from the itemsets
-  if (rank == 0) {
+    // At this point, Master has a hashtable containing all frequent itemsets in
+    // the dataset. This contains only unique itemsets, and each itemset has a
+    // count and support associated with it. Master process generates
+    // association rules from the itemsets
     phase_start = MPI_Wtime();
     int rule_count = 0;
     AssociationRule *rules = NULL;
@@ -642,7 +640,8 @@ int main(int argc, char **argv) {
     if (total_all_itemsets > 0) {
       // Use the fixed rule generation function
       rules = generate_rules_fixed(global_itemsets, total_all_itemsets,
-                                   confidence_threshold, &rule_count, &unique_itemsets);
+                                   confidence_threshold, &rule_count,
+                                   &unique_itemsets);
     }
 
     metrics.rule_generation_time = MPI_Wtime() - phase_start;
@@ -739,105 +738,104 @@ int main(int argc, char **argv) {
               metrics.total_rules);
       fclose(metrics_file);
     }
-  }
 
-  // Calculate total time before cleanup
-  end_time = MPI_Wtime();
-  metrics.total_time = end_time - start_time;
+    // Calculate total time before cleanup
+    end_time = MPI_Wtime();
+    metrics.total_time = end_time - start_time;
 
-  // Output performance metrics
-  if (rank == 0) {
-    printf("\n#################### \n");
-    printf("Performance Metrics:\n");
-    printf("Total execution time: %.3f seconds\n", metrics.total_time);
-    printf("File splitting time: %.3f seconds (%.2f%%)\n",
-           metrics.file_split_time,
-           (metrics.file_split_time / metrics.total_time) * 100);
-    printf("Frequent items mining time: %.3f seconds (%.2f%%)\n",
-           metrics.frequent_items_time,
-           (metrics.frequent_items_time / metrics.total_time) * 100);
-    printf("Triangle matrix build time: %.3f seconds (%.2f%%)\n",
-           metrics.triangle_matrix_build_time,
-           (metrics.triangle_matrix_build_time / metrics.total_time) * 100);
-    printf("Pair generation time: %.3f seconds (%.2f%%)\n",
-           metrics.pair_generation_time,
-           (metrics.pair_generation_time / metrics.total_time) * 100);
-    printf("Triangle pruning time: %.3f seconds (%.2f%%)\n",
-           metrics.triangle_prune_time,
-           (metrics.triangle_prune_time / metrics.total_time) * 100);
-    printf("Large itemset mining time: %.3f seconds (%.2f%%)\n",
-           metrics.large_itemset_time,
-           (metrics.large_itemset_time / metrics.total_time) * 100);
-    printf("Rule generation time: %.3f seconds (%.2f%%)\n",
-           metrics.rule_generation_time,
-           (metrics.rule_generation_time / metrics.total_time) * 100);
-    printf("\n");
-    printf("Dataset statistics:\n");
-    printf("Total transactions: %d\n", metrics.total_transactions);
-    printf("Total frequent items: %d\n", total_frequent_items);
-    printf("Total frequent pairs: %d\n", metrics.total_frequent_pairs);
-    printf("Total frequent itemsets: %d\n", metrics.total_frequent_itemsets);
-    printf("Total association rules: %d\n", metrics.total_rules);
-    printf("#################### \n");
-  }
+    // Output performance metrics
+    if (rank == 0) {
+      printf("\n#################### \n");
+      printf("Performance Metrics:\n");
+      printf("Total execution time: %.3f seconds\n", metrics.total_time);
+      printf("File splitting time: %.3f seconds (%.2f%%)\n",
+             metrics.file_split_time,
+             (metrics.file_split_time / metrics.total_time) * 100);
+      printf("Frequent items mining time: %.3f seconds (%.2f%%)\n",
+             metrics.frequent_items_time,
+             (metrics.frequent_items_time / metrics.total_time) * 100);
+      printf("Triangle matrix build time: %.3f seconds (%.2f%%)\n",
+             metrics.triangle_matrix_build_time,
+             (metrics.triangle_matrix_build_time / metrics.total_time) * 100);
+      printf("Pair generation time: %.3f seconds (%.2f%%)\n",
+             metrics.pair_generation_time,
+             (metrics.pair_generation_time / metrics.total_time) * 100);
+      printf("Triangle pruning time: %.3f seconds (%.2f%%)\n",
+             metrics.triangle_prune_time,
+             (metrics.triangle_prune_time / metrics.total_time) * 100);
+      printf("Large itemset mining time: %.3f seconds (%.2f%%)\n",
+             metrics.large_itemset_time,
+             (metrics.large_itemset_time / metrics.total_time) * 100);
+      printf("Rule generation time: %.3f seconds (%.2f%%)\n",
+             metrics.rule_generation_time,
+             (metrics.rule_generation_time / metrics.total_time) * 100);
+      printf("\n");
+      printf("Dataset statistics:\n");
+      printf("Total transactions: %d\n", metrics.total_transactions);
+      printf("Total frequent items: %d\n", total_frequent_items);
+      printf("Total frequent pairs: %d\n", metrics.total_frequent_pairs);
+      printf("Total frequent itemsets: %d\n", metrics.total_frequent_itemsets);
+      printf("Total association rules: %d\n", metrics.total_rules);
+      printf("#################### \n");
+    }
 
-  // Clean up all resources before MPI_Finalize
-  // First, clean up local resources with thorough null checks
-  if (all_frequent_itemsets != NULL) {
-    for (int i = 0; i < total_itemsets; i++) {
-      if (all_frequent_itemsets[i].elements != NULL) {
-        free(all_frequent_itemsets[i].elements);
-        all_frequent_itemsets[i].elements = NULL;
+    // Clean up all resources before MPI_Finalize
+    // First, clean up local resources with thorough null checks
+    if (all_frequent_itemsets != NULL) {
+      for (int i = 0; i < total_itemsets; i++) {
+        if (all_frequent_itemsets[i].elements != NULL) {
+          free(all_frequent_itemsets[i].elements);
+          all_frequent_itemsets[i].elements = NULL;
+        }
       }
+      free(all_frequent_itemsets);
+      all_frequent_itemsets = NULL;
     }
-    free(all_frequent_itemsets);
-    all_frequent_itemsets = NULL;
-  }
 
-  // Free frequent_pairs array if it was allocated
-  // Note: The elements were already copied to all_frequent_itemsets, so we
-  // just free the array
-  if (frequent_pairs != NULL) {
-    free(frequent_pairs);
-    frequent_pairs = NULL;
-  }
-
-  // Clean up the triangular matrix
-  if (local_tri != NULL) {
-    if (local_tri->matrix != NULL) {
-      free(local_tri->matrix);
-      local_tri->matrix = NULL;
+    // Free frequent_pairs array if it was allocated
+    // Note: The elements were already copied to all_frequent_itemsets, so we
+    // just free the array
+    if (frequent_pairs != NULL) {
+      free(frequent_pairs);
+      frequent_pairs = NULL;
     }
-    if (local_tri->item_to_index_map != NULL) {
-      free(local_tri->item_to_index_map);
-      local_tri->item_to_index_map = NULL;
+
+    // Clean up the triangular matrix
+    if (local_tri != NULL) {
+      if (local_tri->matrix != NULL) {
+        free(local_tri->matrix);
+        local_tri->matrix = NULL;
+      }
+      if (local_tri->item_to_index_map != NULL) {
+        free(local_tri->item_to_index_map);
+        local_tri->item_to_index_map = NULL;
+      }
+      if (local_tri->index_to_item_map != NULL) {
+        free(local_tri->index_to_item_map);
+        local_tri->index_to_item_map = NULL;
+      }
+      free(local_tri);
+      local_tri = NULL;
     }
-    if (local_tri->index_to_item_map != NULL) {
-      free(local_tri->index_to_item_map);
-      local_tri->index_to_item_map = NULL;
+
+    // Free the hash table
+    free_table(&local_table);
+
+    // Free the split points array
+    if (split_points != NULL) {
+      free(split_points);
+      split_points = NULL;
     }
-    free(local_tri);
-    local_tri = NULL;
+
+    // Ensure file is closed
+    if (fp != NULL) {
+      fclose(fp);
+      fp = NULL;
+    }
+
+    // Final barrier to ensure all processes are done with cleanup
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    MPI_Finalize();
+    return 0;
   }
-
-  // Free the hash table
-  free_table(&local_table);
-
-  // Free the split points array
-  if (split_points != NULL) {
-    free(split_points);
-    split_points = NULL;
-  }
-
-  // Ensure file is closed
-  if (fp != NULL) {
-    fclose(fp);
-    fp = NULL;
-  }
-
-  // Final barrier to ensure all processes are done with cleanup
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  MPI_Finalize();
-  return 0;
-}
