@@ -239,8 +239,6 @@ int check_pairs(TriangularMatrix *matrix, int *items, int count) {
       // Ensure i < j for triangular matrix
       if (idx_i < idx_j) {
         int index = get_triangle_index(idx_i, idx_j, num_items);
-        printf("ERROR: i = %d, j = %d, idx = %d, n = %d, total_pairs = %d\n",
-               idx_i, idx_j, index, num_items, total_pairs);
         assert(index >= 0 && index < (num_items * (num_items - 1)) / 2);
 
         if (index >= 0 && index < (num_items * (num_items - 1) / 2)) {
