@@ -17,7 +17,8 @@ static inline int get_triangle_index(int i, int j, int n) {
     j = tmp;
   }
   //   (((n) * (n - 1) - (n - (i)) * (n - (i) + 1)) / 2 + ((j) - (i)))
-  return (n * (n - 1) - (n - i) * (n - i + 1)) / 2 + (j - i - 1);
+  return i * (n - 1) - (i * (i + 1)) / 2 + (j - i - 1);
+  // (n * (n - 1) - (n - i) * (n - i + 1)) / 2 + (j - i - 1);
 }
 
 TriangularMatrix *build_tri_matrix(HashTable *frequent_items) {
