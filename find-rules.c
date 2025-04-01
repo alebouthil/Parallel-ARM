@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
   metrics.pair_generation_time = MPI_Wtime() - phase_start;
 
   if (pairs_generated) {
-    printf("Proc %i: %d Pairs generated\n", rank, );
+    printf("Proc %i: %d Pairs generated\n", rank, total_pairs);
   } else {
     printf("Proc %i: No pairs were generated\n", rank);
   }

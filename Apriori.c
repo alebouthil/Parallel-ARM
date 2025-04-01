@@ -222,11 +222,7 @@ int check_pairs(TriangularMatrix *matrix, int *items, int count) {
         int index = TRIANGULAR_INDEX(idx_i, idx_j, num_items);
         if (index >= 0 && index < (num_items * (num_items - 1) / 2)) {
           triangle[index]++;
-        }
-      } else {
-        int index = TRIANGULAR_INDEX(idx_j, idx_i, num_items);
-        if (index >= 0 && index < (num_items * (num_items - 1) / 2)) {
-          triangle[index]++;
+          pairs++;
         }
       }
     }
