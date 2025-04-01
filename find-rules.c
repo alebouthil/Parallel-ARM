@@ -29,6 +29,7 @@ typedef struct {
 } PerformanceMetrics;
 
 int main(int argc, char **argv) {
+  setenv("MALLOC_CHECK_", "3", 1);
   int size, rank;
   double start_time, end_time;
   PerformanceMetrics metrics = {0};
@@ -514,16 +515,6 @@ int main(int argc, char **argv) {
         // Check if we already have this itemset in the master array
         global_itemsets[current_idx].size = size_buf;
         global_itemsets[current_idx].support = support_buf;
-        global_itemsets[current_idx].elements = malloc(size_buf * sizeof(int));
-        if (global_itemsets[current_idx].elements == NULL) {
-          printf("Memory allocation failed for global_itemsets[%d].elements\n",
-                 current_idx);
-          // Skip this itemset
-          int dummy_buffer[100]; // Large enough to receive whatever was sent
-          MPI_Recv(dummy_buffer, size_buf, MPI_INT, src, 3, MPI_COMM_WORLD,
-                   MPI_STATUS_IGNORE);
-          continue;
-        }
         int *elements = malloc(size_buf * sizeof(int));
         MPI_Recv(elements, size_buf, MPI_INT, src, 3, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
@@ -540,7 +531,7 @@ int main(int argc, char **argv) {
               break;
             }
           }
-          if (match) { // We already have thsi itemset, just add the number of
+          if (match) { // We already have this itemset, just add the number of
                        // occurences
             global_itemsets[j].count += count_buf;
             global_itemsets[j].support =
@@ -550,8 +541,6 @@ int main(int argc, char **argv) {
 
             // Itemset was already present, reset current slot to accept next
             // new itemset
-            free(global_itemsets[current_idx].elements);
-            global_itemsets[current_idx].elements = NULL;
             global_itemsets[current_idx].size = 0;
             global_itemsets[current_idx].count = 0;
             global_itemsets[current_idx].support = 0.0;
@@ -564,6 +553,8 @@ int main(int argc, char **argv) {
           global_itemsets[current_idx].count = count_buf;
           global_itemsets[current_idx].support =
               (float)global_itemsets[current_idx].count / total_transactions;
+          global_itemsets[current_idx].elements =
+              malloc(size_buf * sizeof(int));
           global_itemsets[current_idx].elements = elements;
           current_idx++;
         } else {
@@ -576,7 +567,8 @@ int main(int argc, char **argv) {
 
     // Update the actual count of received itemsets
     total_all_itemsets = current_idx;
-    printf("Master has %d unique itemsets after merging from worker procs \n", total_all_itemsets);
+    printf("Master has %d unique itemsets after merging from worker procs \n",
+           total_all_itemsets);
 
     // Debug: Print some sample itemsets
     if (total_all_itemsets > 0) {
