@@ -1,5 +1,6 @@
 #include "Apriori.h"
 #include "dynamic_hash_table.h"
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -140,6 +141,9 @@ ItemSet *prune_triangle(TriangularMatrix *matrix, float support, int baskets,
   for (int i = 0; i < n - 1; i++) {
     for (int j = i + 1; j < n; j++) {
       int idx = TRIANGULAR_INDEX(i, j, n);
+
+      assert(idx >= 0 && idx < (n * (n - 1)) / 2);
+
       float item_support = (float)triangle[idx] / baskets;
       if (item_support >= support) {
         ItemSet is;
@@ -183,9 +187,10 @@ ItemSet *prune_triangle(TriangularMatrix *matrix, float support, int baskets,
   return results;
 }
 
-/** 
+/**
  * Generate pairs of frequent items
- * @param TriangularMatrix *matrix a triangular matrix to store candidate pairs in
+ * @param TriangularMatrix *matrix a triangular matrix to store candidate pairs
+ * in
  * @param int *items array of frequent ints from a basket
  * @param int count number of frequent ints in the basket
  * @return number of pairs found in basket. pairs stored in TriangularMatrix
@@ -220,6 +225,9 @@ int check_pairs(TriangularMatrix *matrix, int *items, int count) {
       // Ensure i < j for triangular matrix
       if (idx_i < idx_j) {
         int index = TRIANGULAR_INDEX(idx_i, idx_j, num_items);
+
+        assert(index >= 0 && index < (num_items * (num_items - 1)) / 2);
+
         if (index >= 0 && index < (num_items * (num_items - 1) / 2)) {
           triangle[index]++;
           pairs++;
