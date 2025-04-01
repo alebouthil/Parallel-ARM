@@ -501,14 +501,15 @@ int main(int argc, char **argv) {
         float support_buf;
         int count_buf;
 
-        // Receive size and support
+        // Receive size, support and count
         MPI_Recv(&size_buf, 1, MPI_INT, src, 0, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
         MPI_Recv(&support_buf, 1, MPI_FLOAT, src, 1, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
         MPI_Recv(&count_buf, 1, MPI_INT, src, 2, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
-        // Allocate elements array and receive elements
+
+        // Check if we already have this itemset in the master array
         global_itemsets[current_idx].size = size_buf;
         global_itemsets[current_idx].support = support_buf;
         global_itemsets[current_idx].elements = malloc(size_buf * sizeof(int));
@@ -537,15 +538,26 @@ int main(int argc, char **argv) {
               break;
             }
           }
-          if (match) {
+          if (match) { // We already have thsi itemset, just add the number of
+                       // occurences
             global_itemsets[j].count += count_buf;
             global_itemsets[j].support =
-                (float)global_itemsets[j].count / total_transactions;
+                (float)global_itemsets[j].count /
+                total_transactions; // Recalculate support for an itemset
             merged = true;
+
+            // Itemset was already present, reset current slot to accept next
+            // new itemset
+            free(global_itemsets[current_idx].elements);
+            global_itemsets[current_idx].elements = NULL;
+            global_itemsets[current_idx].size = 0;
+            global_itemsets[current_idx].count = 0;
+            global_itemsets[current_idx].support = 0.0;
+
             break;
           }
         }
-        if (!merged) {
+        if (!merged) { // New itemset, take in all values
           global_itemsets[current_idx].size = size_buf;
           global_itemsets[current_idx].count = count_buf;
           global_itemsets[current_idx].support =
@@ -554,6 +566,7 @@ int main(int argc, char **argv) {
           current_idx++;
         } else {
           free(elements);
+          elements = NULL;
         }
         current_idx++;
       }
@@ -561,7 +574,7 @@ int main(int argc, char **argv) {
 
     // Update the actual count of received itemsets
     total_all_itemsets = current_idx;
-    printf("Master has received %d valid itemsets\n", total_all_itemsets);
+    printf("Master has received %d unique itemsets\n", total_all_itemsets);
 
     // Debug: Print some sample itemsets
     if (total_all_itemsets > 0) {
