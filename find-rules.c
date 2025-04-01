@@ -515,6 +515,7 @@ int main(int argc, char **argv) {
                    MPI_STATUS_IGNORE);
           MPI_Recv(&count_buf, 1, MPI_INT, src, 2, MPI_COMM_WORLD,
                    MPI_STATUS_IGNORE);
+          printf("Master recieving itemset of size %d and count %d, from %d ", size_buf, count_buf, src);
 
           // Check if we already have this itemset in the master array
           global_itemsets[current_idx].size = size_buf;
@@ -542,6 +543,7 @@ int main(int argc, char **argv) {
                   (float)global_itemsets[j].count /
                   total_transactions; // Recalculate support for an itemset
               merged = true;
+              printf("itemset merged \n");
 
               // Itemset was already present, reset current slot to accept next
               // new itemset
@@ -561,6 +563,7 @@ int main(int argc, char **argv) {
                 malloc(size_buf * sizeof(int));
             global_itemsets[current_idx].elements = elements;
             current_idx++;
+            printf("itemset not merged \n");
           } else {
             free(elements);
             elements = NULL;
