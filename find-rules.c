@@ -3,7 +3,6 @@
 #include "io-processing.h"
 #include "itemset_hash_table.h"
 #include "rules-aux.h"
-#include <math.h>
 #include <mpi.h>
 #include <stdbool.h>
 #include <stdio.h>
