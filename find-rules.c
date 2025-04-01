@@ -35,15 +35,6 @@ int main(int argc, char **argv) {
   double start_time, end_time;
   PerformanceMetrics metrics = {0};
 
-  if (argc < 4) {
-    if (rank == 0)
-      fprintf(stderr,
-              "Usage: %s <inputfile> <support_threshold> "
-              "<confidence_threshold> <text>\n",
-              argv[0]);
-    return 1;
-  }
-
   // Record total execution start time
   start_time = MPI_Wtime();
 
@@ -52,6 +43,14 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+  if (argc < 4) {
+    if (rank == 0)
+      fprintf(stderr,
+              "Usage: %s <inputfile> <support_threshold> "
+              "<confidence_threshold> <text>\n",
+              argv[0]);
+    return 1;
+  }
   float global_support = strtof(argv[2], NULL);
   float confidence_threshold = strtof(argv[3], NULL);
   int text = strtol(argv[4], NULL, 10);
