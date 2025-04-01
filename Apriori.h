@@ -1,6 +1,4 @@
 #include "dynamic_hash_table.h"
-#define TRIANGULAR_INDEX(i, j, n)                                              \
-  (((n) * (n - 1) - (n - (i)) * (n - (i) + 1)) / 2 + ((j) - (i)))
 
 #ifndef MYSTRUCT_H
 #define MYSTRUCT_H
@@ -37,6 +35,7 @@ ItemSet *prune_triangle(TriangularMatrix *matrix, float support, int baskets,
 int *extract_frequent(HashTable *frequent_items, char *basket, int *outcount);
 TriangularMatrix *build_tri_matrix(HashTable *frequent_items);
 int check_pairs(TriangularMatrix *matrix, int *items, int count);
+static inline int get_triangle_index(int i, int j, int n);
 
 // Helper functions
 int contains_item(int item, int *array, int size);
