@@ -157,6 +157,7 @@ int main(int argc, char **argv) {
   memset(buffer, 0, sizeof(buffer));
 
   int pairs_generated = 0;
+  int total_pairs = 0;
   if (local_tri != NULL) {
     while (ftell(fp) < read_end && fgets(buffer, sizeof(buffer), fp) != NULL) {
       int outcount;
@@ -164,8 +165,8 @@ int main(int argc, char **argv) {
 
       if (frequent_items != NULL) {
         if (outcount >= 2) {
-          check_pairs(local_tri, frequent_items, outcount);
-          pairs_generated += out;
+          total_pairs += check_pairs(local_tri, frequent_items, outcount);
+          pairs_generated = 1;
         }
 
         free(frequent_items);
