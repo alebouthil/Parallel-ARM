@@ -109,7 +109,8 @@ int main(int argc, char **argv) {
   if (rank == 0) {
     printf("#################### \n");
     printf("Total of %i transactions found \n", total_transactions);
-    printf("Total of %i frequent items found (not unique)\n", total_frequent_items);
+    printf("Total of %i frequent items found (not unique)\n",
+           total_frequent_items);
     printf("#################### \n");
     printf("Input processing complete \n");
     printf("#################### \n");
@@ -493,331 +494,328 @@ int main(int argc, char **argv) {
       }
       printf("Master will receive %d total itemsets\n", total_all_itemsets);
     }
+  }
 
-    // Note: We can't easily create an MPI datatype for ItemSet because it
-    // contains a pointer For simplicity, we'll send each itemset's components
-    // individually
+  // Note: We can't easily create an MPI datatype for ItemSet because it
+  // contains a pointer For simplicity, we'll send each itemset's components
+  // individually
 
-    if (rank == 0 && total_all_itemsets > 0) {
-      // Master process receives itemsets one by one
-      // Merges them into it's local list of itemsets
-      int current_idx = total_itemsets;
+  if (rank == 0 && total_all_itemsets > 0) {
+    // Master process receives itemsets one by one
+    // Merges them into it's local list of itemsets
+    int current_idx = total_itemsets;
 
-      for (int src = 1; src < size; src++) {
-        printf("Master has %d itemsets, and is expecting to recieve %d from proc % \n", current_idx, local_itemset_counts[src], src);
-        for (int i = 0; i < local_itemset_counts[src]; i++) {
-          int size_buf;
-          float support_buf;
-          int count_buf;
+    for (int src = 1; src < size; src++) {
+      printf("Master has %d itemsets, and is expecting to recieve %d from proc "
+             "% \n",
+             current_idx, local_itemset_counts[src], src);
+      for (int i = 0; i < local_itemset_counts[src]; i++) {
+        int size_buf;
+        float support_buf;
+        int count_buf;
 
-          // Receive size, support and count
-          MPI_Recv(&size_buf, 1, MPI_INT, src, 0, MPI_COMM_WORLD,
-                   MPI_STATUS_IGNORE);
-          MPI_Recv(&support_buf, 1, MPI_FLOAT, src, 1, MPI_COMM_WORLD,
-                   MPI_STATUS_IGNORE);
-          MPI_Recv(&count_buf, 1, MPI_INT, src, 2, MPI_COMM_WORLD,
-                   MPI_STATUS_IGNORE);
-          printf("Master recieving itemset of size %d and count %d, from %d ", size_buf, count_buf, src);
+        // Receive size, support and count
+        MPI_Recv(&size_buf, 1, MPI_INT, src, 0, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+        MPI_Recv(&support_buf, 1, MPI_FLOAT, src, 1, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+        MPI_Recv(&count_buf, 1, MPI_INT, src, 2, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
 
-          // Check if we already have this itemset in the master array
-          global_itemsets[current_idx].size = size_buf;
-          global_itemsets[current_idx].support = support_buf;
-          int *elements = malloc(size_buf * sizeof(int));
-          MPI_Recv(elements, size_buf, MPI_INT, src, 3, MPI_COMM_WORLD,
-                   MPI_STATUS_IGNORE);
+        // Check if we already have this itemset in the master array
+        global_itemsets[current_idx].size = size_buf;
+        global_itemsets[current_idx].support = support_buf;
+        int *elements = malloc(size_buf * sizeof(int));
+        MPI_Recv(elements, size_buf, MPI_INT, src, 3, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
 
-          // Merge into global_itemsets or add new
-          bool merged = false;
-          for (int j = 0; j < current_idx; j++) {
-            if (global_itemsets[j].size != size_buf)
-              continue;
-            bool match = true;
-            for (int k = 0; k < size_buf; k++) {
-              if (global_itemsets[j].elements[k] != elements[k]) {
-                match = false;
-                break;
-              }
-            }
-            if (match) { // We already have this itemset, just add the number of
-                         // occurences
-              global_itemsets[j].count += count_buf;
-              global_itemsets[j].support =
-                  (float)global_itemsets[j].count /
-                  total_transactions; // Recalculate support for an itemset
-              merged = true;
-              printf("itemset merged \n");
-
-              // Itemset was already present, reset current slot to accept next
-              // new itemset
-              global_itemsets[current_idx].size = 0;
-              global_itemsets[current_idx].count = 0;
-              global_itemsets[current_idx].support = 0.0;
-
+        // Merge into global_itemsets or add new
+        bool merged = false;
+        for (int j = 0; j < current_idx; j++) {
+          if (global_itemsets[j].size != size_buf)
+            continue;
+          bool match = true;
+          for (int k = 0; k < size_buf; k++) {
+            if (global_itemsets[j].elements[k] != elements[k]) {
+              match = false;
               break;
             }
           }
-          if (!merged) { // New itemset, take in all values
-            global_itemsets[current_idx].size = size_buf;
-            global_itemsets[current_idx].count = count_buf;
-            global_itemsets[current_idx].support =
-                (float)global_itemsets[current_idx].count / total_transactions;
-            global_itemsets[current_idx].elements =
-                malloc(size_buf * sizeof(int));
-            global_itemsets[current_idx].elements = elements;
-            current_idx++;
-            printf("itemset not merged \n");
-          } else {
-            free(elements);
-            elements = NULL;
+          if (match) { // We already have this itemset, just add the number of
+                       // occurences
+            global_itemsets[j].count += count_buf;
+            global_itemsets[j].support =
+                (float)global_itemsets[j].count /
+                total_transactions; // Recalculate support for an itemset
+            merged = true;
+
+            // Itemset was already present, reset current slot to accept next
+            // new itemset
+            global_itemsets[current_idx].size = 0;
+            global_itemsets[current_idx].count = 0;
+            global_itemsets[current_idx].support = 0.0;
+
+            break;
           }
+        }
+        if (!merged) { // New itemset, take in all values
+          global_itemsets[current_idx].size = size_buf;
+          global_itemsets[current_idx].count = count_buf;
+          global_itemsets[current_idx].support =
+              (float)global_itemsets[current_idx].count / total_transactions;
+          global_itemsets[current_idx].elements =
+              malloc(size_buf * sizeof(int));
+          global_itemsets[current_idx].elements = elements;
           current_idx++;
+        } else {
+          free(elements);
+          elements = NULL;
         }
-      }
-
-      // Update the actual count of received itemsets
-      total_all_itemsets = current_idx;
-      printf("Master has %d unique itemsets after merging from worker procs \n",
-             total_all_itemsets);
-
-      // Debug: Print some sample itemsets
-      if (total_all_itemsets > 0) {
-        printf("DEBUG: Sample of global itemsets:\n");
-        int to_print = (total_all_itemsets < 20) ? total_all_itemsets : 20;
-        for (int i = 0; i < to_print; i++) {
-          printf("  Itemset %d (size %d, support %.4f): {", i,
-                 global_itemsets[i].size, global_itemsets[i].support);
-          for (int j = 0; j < global_itemsets[i].size; j++) {
-            printf("%d", global_itemsets[i].elements[j]);
-            if (j < global_itemsets[i].size - 1)
-              printf(", ");
-          }
-          printf("}\n");
-        }
-      }
-    } else if (rank == 0) {
-      printf("Master has received 0 itemsets\n");
-    } else if (total_itemsets > 0) {
-      // Worker processes send their itemsets
-      for (int i = 0; i < total_itemsets; i++) {
-        printf("Proc %d is sending %d itemset to master", rank, total_itemsets);
-        MPI_Send(&all_frequent_itemsets[i].size, 1, MPI_INT, 0, 0,
-                 MPI_COMM_WORLD);
-        MPI_Send(&all_frequent_itemsets[i].support, 1, MPI_FLOAT, 0, 1,
-                 MPI_COMM_WORLD);
-        MPI_Send(&all_frequent_itemsets[i].count, 1, MPI_INT, 0, 2,
-                 MPI_COMM_WORLD);
-        MPI_Send(all_frequent_itemsets[i].elements,
-                 all_frequent_itemsets[i].size, MPI_INT, 0, 3, MPI_COMM_WORLD);
+        current_idx++;
       }
     }
 
-    // Master process generates association rules
-    if (rank == 0) {
-      phase_start = MPI_Wtime();
-      int rule_count = 0;
-      AssociationRule *rules = NULL;
+    // Update the actual count of received itemsets
+    total_all_itemsets = current_idx;
+    printf("Master has %d unique itemsets after merging from worker procs \n",
+           total_all_itemsets);
 
-      if (total_all_itemsets > 0) {
-        // Use the fixed rule generation function
-        rules = generate_rules_fixed(global_itemsets, total_all_itemsets,
-                                     confidence_threshold, &rule_count);
-      }
-
-      metrics.rule_generation_time = MPI_Wtime() - phase_start;
-      metrics.total_rules = rule_count;
-
-      printf("#################### \n");
-      printf("Generated %d association rules with confidence >= %f\n",
-             rule_count, confidence_threshold);
-      printf("#################### \n");
-
-      // Print top rules (limited to 10 for brevity)
-      if (rule_count > 0 && text == 0) {
-        int rules_to_print = (rule_count < 10) ? rule_count : 10;
-        printf("Top %d association rules (numeric):\n", rules_to_print);
-
-        for (int i = 0; i < rules_to_print; i++) {
-          printf("Rule %d: ", i + 1);
-          print_rule(rules[i]);
+    // Debug: Print some sample itemsets
+    if (total_all_itemsets > 0) {
+      printf("DEBUG: Sample of global itemsets:\n");
+      int to_print = (total_all_itemsets < 20) ? total_all_itemsets : 20;
+      for (int i = 0; i < to_print; i++) {
+        printf("  Itemset %d (size %d, support %.4f): {", i,
+               global_itemsets[i].size, global_itemsets[i].support);
+        for (int j = 0; j < global_itemsets[i].size; j++) {
+          printf("%d", global_itemsets[i].elements[j]);
+          if (j < global_itemsets[i].size - 1)
+            printf(", ");
         }
-
-        // Clean up rules
-        if (rules != NULL) {
-          free_rules(rules, rule_count);
-          rules = NULL;
-        }
-      } else if (rule_count > 0 && text == 1) {
-        int rules_to_print = (rule_count < 10) ? rule_count : 10;
-        printf("Top %d association rules:\n", rules_to_print);
-
-        for (int i = 0; i < rules_to_print; i++) {
-          printf("Rule %c: ", i + 1);
-          print_text_rule(rules[i]);
-        }
-
-        // Clean up rules
-        if (rules != NULL) {
-          free_rules(rules, rule_count);
-          rules = NULL;
-        }
-      } else {
-        printf("No association rules found.\n");
-      }
-
-      // Clean up global itemsets
-      if (global_itemsets != NULL) {
-        for (int i = 0; i < total_all_itemsets; i++) {
-          if (global_itemsets[i].elements != NULL) {
-            free(global_itemsets[i].elements);
-            global_itemsets[i].elements = NULL;
-          }
-        }
-        free(global_itemsets);
-        global_itemsets = NULL;
-      }
-
-      if (local_itemset_counts != NULL) {
-        free(local_itemset_counts);
-        local_itemset_counts = NULL;
-      }
-
-      if (itemset_displacements != NULL) {
-        free(itemset_displacements);
-        itemset_displacements = NULL;
-      }
-
-      // Write metrics to CSV file for further analysis
-      FILE *metrics_file = fopen("performance_metrics.csv", "w");
-      if (metrics_file != NULL) {
-        fprintf(metrics_file, "Metric,Value\n");
-        fprintf(metrics_file, "Total execution time (s),%.3f\n",
-                metrics.total_time);
-        fprintf(metrics_file, "File splitting time (s),%.3f\n",
-                metrics.file_split_time);
-        fprintf(metrics_file, "Frequent items mining time (s),%.3f\n",
-                metrics.frequent_items_time);
-        fprintf(metrics_file, "Triangle matrix build time (s),%.3f\n",
-                metrics.triangle_matrix_build_time);
-        fprintf(metrics_file, "Pair generation time (s),%.3f\n",
-                metrics.pair_generation_time);
-        fprintf(metrics_file, "Triangle pruning time (s),%.3f\n",
-                metrics.triangle_prune_time);
-        fprintf(metrics_file, "Large itemset mining time (s),%.3f\n",
-                metrics.large_itemset_time);
-        fprintf(metrics_file, "Rule generation time (s),%.3f\n",
-                metrics.rule_generation_time);
-        fprintf(metrics_file, "Total transactions,%d\n",
-                metrics.total_transactions);
-        fprintf(metrics_file, "Total frequent items,%d\n",
-                total_frequent_items);
-        fprintf(metrics_file, "Total frequent pairs,%d\n",
-                metrics.total_frequent_pairs);
-        fprintf(metrics_file, "Total frequent itemsets,%d\n",
-                metrics.total_frequent_itemsets);
-        fprintf(metrics_file, "Total association rules,%d\n",
-                metrics.total_rules);
-        fclose(metrics_file);
+        printf("}\n");
       }
     }
-
-    // Calculate total time before cleanup
-    end_time = MPI_Wtime();
-    metrics.total_time = end_time - start_time;
-
-    // Output performance metrics
-    if (rank == 0) {
-      printf("\n#################### \n");
-      printf("Performance Metrics:\n");
-      printf("Total execution time: %.3f seconds\n", metrics.total_time);
-      printf("File splitting time: %.3f seconds (%.2f%%)\n",
-             metrics.file_split_time,
-             (metrics.file_split_time / metrics.total_time) * 100);
-      printf("Frequent items mining time: %.3f seconds (%.2f%%)\n",
-             metrics.frequent_items_time,
-             (metrics.frequent_items_time / metrics.total_time) * 100);
-      printf("Triangle matrix build time: %.3f seconds (%.2f%%)\n",
-             metrics.triangle_matrix_build_time,
-             (metrics.triangle_matrix_build_time / metrics.total_time) * 100);
-      printf("Pair generation time: %.3f seconds (%.2f%%)\n",
-             metrics.pair_generation_time,
-             (metrics.pair_generation_time / metrics.total_time) * 100);
-      printf("Triangle pruning time: %.3f seconds (%.2f%%)\n",
-             metrics.triangle_prune_time,
-             (metrics.triangle_prune_time / metrics.total_time) * 100);
-      printf("Large itemset mining time: %.3f seconds (%.2f%%)\n",
-             metrics.large_itemset_time,
-             (metrics.large_itemset_time / metrics.total_time) * 100);
-      printf("Rule generation time: %.3f seconds (%.2f%%)\n",
-             metrics.rule_generation_time,
-             (metrics.rule_generation_time / metrics.total_time) * 100);
-      printf("\n");
-      printf("Dataset statistics:\n");
-      printf("Total transactions: %d\n", metrics.total_transactions);
-      printf("Total frequent items: %d\n", total_frequent_items);
-      printf("Total frequent pairs: %d\n", metrics.total_frequent_pairs);
-      printf("Total frequent itemsets: %d\n", metrics.total_frequent_itemsets);
-      printf("Total association rules: %d\n", metrics.total_rules);
-      printf("#################### \n");
+  } else if (rank == 0) {
+    printf("Master has received 0 itemsets\n");
+  } else if (total_itemsets > 0) {
+    // Worker processes send their itemsets
+    for (int i = 0; i < total_itemsets; i++) {
+      MPI_Send(&all_frequent_itemsets[i].size, 1, MPI_INT, 0, 0,
+               MPI_COMM_WORLD);
+      MPI_Send(&all_frequent_itemsets[i].support, 1, MPI_FLOAT, 0, 1,
+               MPI_COMM_WORLD);
+      MPI_Send(&all_frequent_itemsets[i].count, 1, MPI_INT, 0, 2,
+               MPI_COMM_WORLD);
+      MPI_Send(all_frequent_itemsets[i].elements, all_frequent_itemsets[i].size,
+               MPI_INT, 0, 3, MPI_COMM_WORLD);
     }
-
-    // Clean up all resources before MPI_Finalize
-    // First, clean up local resources with thorough null checks
-    if (all_frequent_itemsets != NULL) {
-      for (int i = 0; i < total_itemsets; i++) {
-        if (all_frequent_itemsets[i].elements != NULL) {
-          free(all_frequent_itemsets[i].elements);
-          all_frequent_itemsets[i].elements = NULL;
-        }
-      }
-      free(all_frequent_itemsets);
-      all_frequent_itemsets = NULL;
-    }
-
-    // Free frequent_pairs array if it was allocated
-    // Note: The elements were already copied to all_frequent_itemsets, so we
-    // just free the array
-    if (frequent_pairs != NULL) {
-      free(frequent_pairs);
-      frequent_pairs = NULL;
-    }
-
-    // Clean up the triangular matrix
-    if (local_tri != NULL) {
-      if (local_tri->matrix != NULL) {
-        free(local_tri->matrix);
-        local_tri->matrix = NULL;
-      }
-      if (local_tri->item_to_index_map != NULL) {
-        free(local_tri->item_to_index_map);
-        local_tri->item_to_index_map = NULL;
-      }
-      if (local_tri->index_to_item_map != NULL) {
-        free(local_tri->index_to_item_map);
-        local_tri->index_to_item_map = NULL;
-      }
-      free(local_tri);
-      local_tri = NULL;
-    }
-
-    // Free the hash table
-    free_table(&local_table);
-
-    // Free the split points array
-    if (split_points != NULL) {
-      free(split_points);
-      split_points = NULL;
-    }
-
-    // Ensure file is closed
-    if (fp != NULL) {
-      fclose(fp);
-      fp = NULL;
-    }
-
-    // Final barrier to ensure all processes are done with cleanup
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    MPI_Finalize();
-    return 0;
   }
+
+  // Master process generates association rules
+  if (rank == 0) {
+    phase_start = MPI_Wtime();
+    int rule_count = 0;
+    AssociationRule *rules = NULL;
+
+    if (total_all_itemsets > 0) {
+      // Use the fixed rule generation function
+      rules = generate_rules_fixed(global_itemsets, total_all_itemsets,
+                                   confidence_threshold, &rule_count);
+    }
+
+    metrics.rule_generation_time = MPI_Wtime() - phase_start;
+    metrics.total_rules = rule_count;
+
+    printf("#################### \n");
+    printf("Generated %d association rules with confidence >= %f\n", rule_count,
+           confidence_threshold);
+    printf("#################### \n");
+
+    // Print top rules (limited to 10 for brevity)
+    if (rule_count > 0 && text == 0) {
+      int rules_to_print = (rule_count < 10) ? rule_count : 10;
+      printf("Top %d association rules (numeric):\n", rules_to_print);
+
+      for (int i = 0; i < rules_to_print; i++) {
+        printf("Rule %d: ", i + 1);
+        print_rule(rules[i]);
+      }
+
+      // Clean up rules
+      if (rules != NULL) {
+        free_rules(rules, rule_count);
+        rules = NULL;
+      }
+    } else if (rule_count > 0 && text == 1) {
+      int rules_to_print = (rule_count < 10) ? rule_count : 10;
+      printf("Top %d association rules:\n", rules_to_print);
+
+      for (int i = 0; i < rules_to_print; i++) {
+        printf("Rule %c: ", i + 1);
+        print_text_rule(rules[i]);
+      }
+
+      // Clean up rules
+      if (rules != NULL) {
+        free_rules(rules, rule_count);
+        rules = NULL;
+      }
+    } else {
+      printf("No association rules found.\n");
+    }
+
+    // Clean up global itemsets
+    if (global_itemsets != NULL) {
+      for (int i = 0; i < total_all_itemsets; i++) {
+        if (global_itemsets[i].elements != NULL) {
+          free(global_itemsets[i].elements);
+          global_itemsets[i].elements = NULL;
+        }
+      }
+      free(global_itemsets);
+      global_itemsets = NULL;
+    }
+
+    if (local_itemset_counts != NULL) {
+      free(local_itemset_counts);
+      local_itemset_counts = NULL;
+    }
+
+    if (itemset_displacements != NULL) {
+      free(itemset_displacements);
+      itemset_displacements = NULL;
+    }
+
+    // Write metrics to CSV file for further analysis
+    FILE *metrics_file = fopen("performance_metrics.csv", "w");
+    if (metrics_file != NULL) {
+      fprintf(metrics_file, "Metric,Value\n");
+      fprintf(metrics_file, "Total execution time (s),%.3f\n",
+              metrics.total_time);
+      fprintf(metrics_file, "File splitting time (s),%.3f\n",
+              metrics.file_split_time);
+      fprintf(metrics_file, "Frequent items mining time (s),%.3f\n",
+              metrics.frequent_items_time);
+      fprintf(metrics_file, "Triangle matrix build time (s),%.3f\n",
+              metrics.triangle_matrix_build_time);
+      fprintf(metrics_file, "Pair generation time (s),%.3f\n",
+              metrics.pair_generation_time);
+      fprintf(metrics_file, "Triangle pruning time (s),%.3f\n",
+              metrics.triangle_prune_time);
+      fprintf(metrics_file, "Large itemset mining time (s),%.3f\n",
+              metrics.large_itemset_time);
+      fprintf(metrics_file, "Rule generation time (s),%.3f\n",
+              metrics.rule_generation_time);
+      fprintf(metrics_file, "Total transactions,%d\n",
+              metrics.total_transactions);
+      fprintf(metrics_file, "Total frequent items,%d\n", total_frequent_items);
+      fprintf(metrics_file, "Total frequent pairs,%d\n",
+              metrics.total_frequent_pairs);
+      fprintf(metrics_file, "Total frequent itemsets,%d\n",
+              metrics.total_frequent_itemsets);
+      fprintf(metrics_file, "Total association rules,%d\n",
+              metrics.total_rules);
+      fclose(metrics_file);
+    }
+  }
+
+  // Calculate total time before cleanup
+  end_time = MPI_Wtime();
+  metrics.total_time = end_time - start_time;
+
+  // Output performance metrics
+  if (rank == 0) {
+    printf("\n#################### \n");
+    printf("Performance Metrics:\n");
+    printf("Total execution time: %.3f seconds\n", metrics.total_time);
+    printf("File splitting time: %.3f seconds (%.2f%%)\n",
+           metrics.file_split_time,
+           (metrics.file_split_time / metrics.total_time) * 100);
+    printf("Frequent items mining time: %.3f seconds (%.2f%%)\n",
+           metrics.frequent_items_time,
+           (metrics.frequent_items_time / metrics.total_time) * 100);
+    printf("Triangle matrix build time: %.3f seconds (%.2f%%)\n",
+           metrics.triangle_matrix_build_time,
+           (metrics.triangle_matrix_build_time / metrics.total_time) * 100);
+    printf("Pair generation time: %.3f seconds (%.2f%%)\n",
+           metrics.pair_generation_time,
+           (metrics.pair_generation_time / metrics.total_time) * 100);
+    printf("Triangle pruning time: %.3f seconds (%.2f%%)\n",
+           metrics.triangle_prune_time,
+           (metrics.triangle_prune_time / metrics.total_time) * 100);
+    printf("Large itemset mining time: %.3f seconds (%.2f%%)\n",
+           metrics.large_itemset_time,
+           (metrics.large_itemset_time / metrics.total_time) * 100);
+    printf("Rule generation time: %.3f seconds (%.2f%%)\n",
+           metrics.rule_generation_time,
+           (metrics.rule_generation_time / metrics.total_time) * 100);
+    printf("\n");
+    printf("Dataset statistics:\n");
+    printf("Total transactions: %d\n", metrics.total_transactions);
+    printf("Total frequent items: %d\n", total_frequent_items);
+    printf("Total frequent pairs: %d\n", metrics.total_frequent_pairs);
+    printf("Total frequent itemsets: %d\n", metrics.total_frequent_itemsets);
+    printf("Total association rules: %d\n", metrics.total_rules);
+    printf("#################### \n");
+  }
+
+  // Clean up all resources before MPI_Finalize
+  // First, clean up local resources with thorough null checks
+  if (all_frequent_itemsets != NULL) {
+    for (int i = 0; i < total_itemsets; i++) {
+      if (all_frequent_itemsets[i].elements != NULL) {
+        free(all_frequent_itemsets[i].elements);
+        all_frequent_itemsets[i].elements = NULL;
+      }
+    }
+    free(all_frequent_itemsets);
+    all_frequent_itemsets = NULL;
+  }
+
+  // Free frequent_pairs array if it was allocated
+  // Note: The elements were already copied to all_frequent_itemsets, so we
+  // just free the array
+  if (frequent_pairs != NULL) {
+    free(frequent_pairs);
+    frequent_pairs = NULL;
+  }
+
+  // Clean up the triangular matrix
+  if (local_tri != NULL) {
+    if (local_tri->matrix != NULL) {
+      free(local_tri->matrix);
+      local_tri->matrix = NULL;
+    }
+    if (local_tri->item_to_index_map != NULL) {
+      free(local_tri->item_to_index_map);
+      local_tri->item_to_index_map = NULL;
+    }
+    if (local_tri->index_to_item_map != NULL) {
+      free(local_tri->index_to_item_map);
+      local_tri->index_to_item_map = NULL;
+    }
+    free(local_tri);
+    local_tri = NULL;
+  }
+
+  // Free the hash table
+  free_table(&local_table);
+
+  // Free the split points array
+  if (split_points != NULL) {
+    free(split_points);
+    split_points = NULL;
+  }
+
+  // Ensure file is closed
+  if (fp != NULL) {
+    fclose(fp);
+    fp = NULL;
+  }
+
+  // Final barrier to ensure all processes are done with cleanup
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  MPI_Finalize();
+  return 0;
 }
