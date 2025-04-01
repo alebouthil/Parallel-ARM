@@ -446,7 +446,7 @@ int main(int argc, char **argv) {
   metrics.total_frequent_itemsets = total_itemsets;
 
   MPI_Barrier(MPI_COMM_WORLD); // Barrier after itemset generation
-  printf("Itemset generation complete \n");
+  printf("Proc %d: Itemset generation complete, %d generated \n", rank, total_itemsets);
 
   // Share frequent itemsets with master process
   int *local_itemset_counts = NULL;
@@ -507,7 +507,7 @@ int main(int argc, char **argv) {
 
     for (int src = 1; src < size; src++) {
       printf("Master has %d itemsets, and is expecting to recieve %d from proc "
-             "% \n",
+             "%d \n",
              current_idx, local_itemset_counts[src], src);
       for (int i = 0; i < local_itemset_counts[src]; i++) {
         int size_buf;
