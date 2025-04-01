@@ -778,64 +778,65 @@ int main(int argc, char **argv) {
       printf("Total association rules: %d\n", metrics.total_rules);
       printf("#################### \n");
     }
-
-    // Clean up all resources before MPI_Finalize
-    // First, clean up local resources with thorough null checks
-    if (all_frequent_itemsets != NULL) {
-      for (int i = 0; i < total_itemsets; i++) {
-        if (all_frequent_itemsets[i].elements != NULL) {
-          free(all_frequent_itemsets[i].elements);
-          all_frequent_itemsets[i].elements = NULL;
-        }
-      }
-      free(all_frequent_itemsets);
-      all_frequent_itemsets = NULL;
-    }
-
-    // Free frequent_pairs array if it was allocated
-    // Note: The elements were already copied to all_frequent_itemsets, so we
-    // just free the array
-    if (frequent_pairs != NULL) {
-      free(frequent_pairs);
-      frequent_pairs = NULL;
-    }
-
-    // Clean up the triangular matrix
-    if (local_tri != NULL) {
-      if (local_tri->matrix != NULL) {
-        free(local_tri->matrix);
-        local_tri->matrix = NULL;
-      }
-      if (local_tri->item_to_index_map != NULL) {
-        free(local_tri->item_to_index_map);
-        local_tri->item_to_index_map = NULL;
-      }
-      if (local_tri->index_to_item_map != NULL) {
-        free(local_tri->index_to_item_map);
-        local_tri->index_to_item_map = NULL;
-      }
-      free(local_tri);
-      local_tri = NULL;
-    }
-
-    // Free the hash table
-    free_table(&local_table);
-
-    // Free the split points array
-    if (split_points != NULL) {
-      free(split_points);
-      split_points = NULL;
-    }
-
-    // Ensure file is closed
-    if (fp != NULL) {
-      fclose(fp);
-      fp = NULL;
-    }
-
-    // Final barrier to ensure all processes are done with cleanup
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    MPI_Finalize();
-    return 0;
   }
+
+  // Clean up all resources before MPI_Finalize
+  // First, clean up local resources with thorough null checks
+  if (all_frequent_itemsets != NULL) {
+    for (int i = 0; i < total_itemsets; i++) {
+      if (all_frequent_itemsets[i].elements != NULL) {
+        free(all_frequent_itemsets[i].elements);
+        all_frequent_itemsets[i].elements = NULL;
+      }
+    }
+    free(all_frequent_itemsets);
+    all_frequent_itemsets = NULL;
+  }
+
+  // Free frequent_pairs array if it was allocated
+  // Note: The elements were already copied to all_frequent_itemsets, so we
+  // just free the array
+  if (frequent_pairs != NULL) {
+    free(frequent_pairs);
+    frequent_pairs = NULL;
+  }
+
+  // Clean up the triangular matrix
+  if (local_tri != NULL) {
+    if (local_tri->matrix != NULL) {
+      free(local_tri->matrix);
+      local_tri->matrix = NULL;
+    }
+    if (local_tri->item_to_index_map != NULL) {
+      free(local_tri->item_to_index_map);
+      local_tri->item_to_index_map = NULL;
+    }
+    if (local_tri->index_to_item_map != NULL) {
+      free(local_tri->index_to_item_map);
+      local_tri->index_to_item_map = NULL;
+    }
+    free(local_tri);
+    local_tri = NULL;
+  }
+
+  // Free the hash table
+  free_table(&local_table);
+
+  // Free the split points array
+  if (split_points != NULL) {
+    free(split_points);
+    split_points = NULL;
+  }
+
+  // Ensure file is closed
+  if (fp != NULL) {
+    fclose(fp);
+    fp = NULL;
+  }
+
+  // Final barrier to ensure all processes are done with cleanup
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  MPI_Finalize();
+  return 0;
+}
