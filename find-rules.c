@@ -4,12 +4,12 @@
 #include "rules-aux.h"
 #include <math.h>
 #include <mpi.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <stdbool.h>
 
 // Structure to hold performance metrics
 typedef struct {
@@ -35,10 +35,10 @@ int main(int argc, char **argv) {
 
   if (argc < 4) {
     if (rank == 0)
-      fprintf(
-          stderr,
-          "Usage: %s <inputfile> <support_threshold> <confidence_threshold> <text>\n",
-          argv[0]);
+      fprintf(stderr,
+              "Usage: %s <inputfile> <support_threshold> "
+              "<confidence_threshold> <text>\n",
+              argv[0]);
     return 1;
   }
 
@@ -300,6 +300,7 @@ int main(int argc, char **argv) {
               candidates[candidates_count].size = candidate->size;
               candidates[candidates_count].support = candidate->support;
               candidates[candidates_count].elements = candidate->elements;
+              candidates[candidates_count].count = candidate->count;
               candidates_count++;
               free(candidate); // Free the container, but not the elements
                                // (copied above)
@@ -338,8 +339,9 @@ int main(int argc, char **argv) {
             for (int i = 0; i < candidates_count; i++) {
               if (is_subset(candidates[i].elements, candidates[i].size,
                             frequent_items, outcount)) {
-                candidates[i].support += 1.0 / local_transaction_count;
-		candidates[i].count += 1;
+                candidates[i].count += 1;
+                candidates[i].support =
+                    (float)candidates[i].count / local_transaction_count;
               }
             }
           }
@@ -376,6 +378,7 @@ int main(int argc, char **argv) {
           retained_itemsets[new_count].size = candidates[i].size;
           retained_itemsets[new_count].support = candidates[i].support;
           retained_itemsets[new_count].elements = candidates[i].elements;
+          retained_itemsets[new_count].count = candidates[i].count;
           new_count++;
         } else {
           // Free memory for non-frequent candidates
@@ -496,7 +499,7 @@ int main(int argc, char **argv) {
       for (int i = 0; i < local_itemset_counts[src]; i++) {
         int size_buf;
         float support_buf;
-	int count_buf;
+        int count_buf;
 
         // Receive size and support
         MPI_Recv(&size_buf, 1, MPI_INT, src, 0, MPI_COMM_WORLD,
@@ -518,36 +521,40 @@ int main(int argc, char **argv) {
                    MPI_STATUS_IGNORE);
           continue;
         }
-int* elements = malloc(size_buf * sizeof(int));
-MPI_Recv(elements, size_buf, MPI_INT, src, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        int *elements = malloc(size_buf * sizeof(int));
+        MPI_Recv(elements, size_buf, MPI_INT, src, 3, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
 
-// Merge into global_itemsets or add new
-bool merged = false;
-for (int j = 0; j < current_idx; j++) {
-    if (global_itemsets[j].size != size_buf) continue;
-    bool match = true;
-    for (int k = 0; k < size_buf; k++) {
-        if (global_itemsets[j].elements[k] != elements[k]) {
-            match = false;
+        // Merge into global_itemsets or add new
+        bool merged = false;
+        for (int j = 0; j < current_idx; j++) {
+          if (global_itemsets[j].size != size_buf)
+            continue;
+          bool match = true;
+          for (int k = 0; k < size_buf; k++) {
+            if (global_itemsets[j].elements[k] != elements[k]) {
+              match = false;
+              break;
+            }
+          }
+          if (match) {
+            global_itemsets[j].count += count_buf;
+            global_itemsets[j].support =
+                (float)global_itemsets[j].count / total_transactions;
+            merged = true;
             break;
+          }
         }
-    }
-    if (match) {
-        global_itemsets[j].count += count_buf;
-	global_itemsets[j].support = (float)global_itemsets[j].count / total_transactions;
-        merged = true;
-        break;
-    }
-}
-if (!merged) {
-    global_itemsets[current_idx].size = size_buf;
-    global_itemsets[current_idx].count = count_buf;
-    global_itemsets[current_idx].support = (float)global_itemsets[current_idx].count / total_transactions;
-    global_itemsets[current_idx].elements = elements;
-    current_idx++;
-} else {
-    free(elements);
-}
+        if (!merged) {
+          global_itemsets[current_idx].size = size_buf;
+          global_itemsets[current_idx].count = count_buf;
+          global_itemsets[current_idx].support =
+              (float)global_itemsets[current_idx].count / total_transactions;
+          global_itemsets[current_idx].elements = elements;
+          current_idx++;
+        } else {
+          free(elements);
+        }
         current_idx++;
       }
     }
