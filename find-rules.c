@@ -609,8 +609,9 @@ int main(int argc, char **argv) {
                MPI_INT, 0, 3, MPI_COMM_WORLD);
     }
   }
-
-  // Master process generates association rules
+  // At this point, Master as an array containing all frequent itemsets in the dataset
+  // This array contains only unique itemsets, and each itemset has a count and support associated with it
+  // Master process generates association rules from the itemsets
   if (rank == 0) {
     phase_start = MPI_Wtime();
     int rule_count = 0;
