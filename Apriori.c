@@ -45,7 +45,7 @@ TriangularMatrix *build_tri_matrix(HashTable *frequent_items) {
   }
 
   // Step 2: Allocate matrix
-  int total_pairs = n * (n - 1) / 2;
+  int total_pairs = (n * (n - 1)) / 2;
   int *matrix = calloc(total_pairs, sizeof(int));
   if (matrix == NULL) {
     printf("Memory allocation failed for triangular matrix\n");
@@ -125,7 +125,7 @@ ItemSet *prune_triangle(TriangularMatrix *matrix, float support, int baskets,
 
   int *index_to_item = matrix->index_to_item_map;
   int n = matrix->num_items;
-  int total_pairs = n * (n - 1) / 2;
+  int total_pairs = (n * (n - 1)) / 2;
 
   ItemSet *results = malloc(total_pairs * sizeof(ItemSet));
   if (results == NULL) {
