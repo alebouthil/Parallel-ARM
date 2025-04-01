@@ -442,6 +442,8 @@ int main(int argc, char **argv) {
   metrics.large_itemset_time = MPI_Wtime() - phase_start;
   metrics.total_frequent_itemsets = total_itemsets;
 
+  MPI_Barrier(MPI_COMM_WORLD); // Barrier after itemset generation
+
   // Share frequent itemsets with master process
   int *local_itemset_counts = NULL;
   int *itemset_displacements = NULL;
