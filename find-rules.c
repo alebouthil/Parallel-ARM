@@ -571,7 +571,6 @@ int main(int argc, char **argv) {
           free(elements);
           elements = NULL;
         }
-        current_idx++;
       }
     }
 
