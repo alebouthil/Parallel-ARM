@@ -9,10 +9,15 @@
 #define MAX_ITEM_ID 20000
 
 static inline int get_triangle_index(int i, int j, int n) {
-    if (i == j) return -1; // Diagonal isn't stored
-    if (i > j) { int tmp = i; i = j; j = tmp; }
-//   (((n) * (n - 1) - (n - (i)) * (n - (i) + 1)) / 2 + ((j) - (i)))
-    return (n * (n - 1) - (n - i) * (n - i + 1)) / 2 + (j - i - 1);
+  if (i == j)
+    return -1; // Diagonal isn't stored
+  if (i > j) {
+    int tmp = i;
+    i = j;
+    j = tmp;
+  }
+  //   (((n) * (n - 1) - (n - (i)) * (n - (i) + 1)) / 2 + ((j) - (i)))
+  return (n * (n - 1) - (n - i) * (n - i + 1)) / 2 + (j - i - 1);
 }
 
 TriangularMatrix *build_tri_matrix(HashTable *frequent_items) {
@@ -214,6 +219,7 @@ int check_pairs(TriangularMatrix *matrix, int *items, int count) {
   int *item_to_index = matrix->item_to_index_map;
   int num_items = matrix->num_items;
   int *triangle = matrix->matrix;
+  int total_pairs = (num_items * (num_items - 1)) / 2;
 
   for (int i = 0; i < count - 1; i++) {
     for (int j = i + 1; j < count; j++) {
@@ -232,7 +238,8 @@ int check_pairs(TriangularMatrix *matrix, int *items, int count) {
       // Ensure i < j for triangular matrix
       if (idx_i < idx_j) {
         int index = get_triangle_index(idx_i, idx_j, num_items);
-
+        printf("ERROR: i = %d, j = %d, idx = %d, n = %d, total_pairs = %d\n",
+               idx_i, idx_j, index, num_items, total_pairs);
         assert(index >= 0 && index < (num_items * (num_items - 1)) / 2);
 
         if (index >= 0 && index < (num_items * (num_items - 1) / 2)) {
