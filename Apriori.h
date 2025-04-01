@@ -36,7 +36,7 @@ ItemSet *prune_triangle(TriangularMatrix *matrix, float support, int baskets,
                         int *out_count);
 int *extract_frequent(HashTable *frequent_items, char *basket, int *outcount);
 TriangularMatrix *build_tri_matrix(HashTable *frequent_items);
-void check_pairs(TriangularMatrix *matrix, int *items, int count);
+int check_pairs(TriangularMatrix *matrix, int *items, int count);
 
 // Helper functions
 int contains_item(int item, int *array, int size);
