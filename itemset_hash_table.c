@@ -1,9 +1,6 @@
 #include "itemset_hash_table.h"
 #include <string.h> // for memcpy
 
-unsigned int hash(int key, int size) { return (unsigned int)key % size; }
-/* initialize an itemset hashtable
- */
 void init_item_table(ItemHashTable *table) {
   if (table == NULL) {
     return;
