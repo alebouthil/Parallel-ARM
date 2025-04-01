@@ -94,7 +94,7 @@ void insert_itemset(ItemHashTable *table, const IntArray *key, float support) {
   }
 
   // Hash the key
-  unsigned int index = hash_int_array(key);
+  unsigned int index = hash_int_array(key) % table->size;
   int start_index = index; // Remember starting point to detect cycles
 
   // After hashing, do some linear probing until we get to a free slot
@@ -125,7 +125,7 @@ float get_support_itemset(ItemHashTable *table, IntArray *key) {
     return 0.0;
   }
 
-  unsigned int index = hash_int_array(key);
+  unsigned int index = hash_int_array(key) % table->size;
   int start_index = index;
 
   while (table->entries[index].occupied) {
