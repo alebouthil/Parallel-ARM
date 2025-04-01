@@ -504,6 +504,7 @@ int main(int argc, char **argv) {
       int current_idx = total_itemsets;
 
       for (int src = 1; src < size; src++) {
+        printf("Master has %d itemsets, and is expecting to recieve %d from proc % \n", current_idx, local_itemset_counts[src], src);
         for (int i = 0; i < local_itemset_counts[src]; i++) {
           int size_buf;
           float support_buf;
@@ -598,6 +599,7 @@ int main(int argc, char **argv) {
     } else if (total_itemsets > 0) {
       // Worker processes send their itemsets
       for (int i = 0; i < total_itemsets; i++) {
+        printf("Proc %d is sending %d itemset to master", rank, total_itemsets);
         MPI_Send(&all_frequent_itemsets[i].size, 1, MPI_INT, 0, 0,
                  MPI_COMM_WORLD);
         MPI_Send(&all_frequent_itemsets[i].support, 1, MPI_FLOAT, 0, 1,
