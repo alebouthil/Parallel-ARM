@@ -1,6 +1,7 @@
 #include "Apriori.h"
 #include "itemset_hash_table.h"
 #include "map_lookup.c"
+#include "rules-aux.h"
 #include <stdlib.h>
 #include <string.h>
 

@@ -1,3 +1,6 @@
+#ifndef ITEMSET_HASH_TABLE_H
+#define ITEMSET_HASH_TABLE_H
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -34,3 +37,5 @@ int compare_int_arrays(const IntArray *a, const IntArray *b);
 IntArray copy_int_array(const IntArray *src);
 void free_int_array(IntArray *arr);
 static int compare_ints(const void *a, const void *b);
+
+#endif

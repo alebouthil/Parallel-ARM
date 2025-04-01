@@ -625,13 +625,16 @@ int main(int argc, char **argv) {
     for (int j = 0; j < global_itemsets[i].size; j++) {
       key.items[j] = global_itemsets[i].elements[j];
     }
-
-    insert_itemset(unique_itemsets, key, global_itemsets[i].support);
+    // Place itemset into hashtable, free key and items for next itemset
+    insert_itemset(&unique_itemsets, key, global_itemsets[i].support);
+    free(key->items);
+    free(key);
   }
 }
-// At this point, Master as an array containing all frequent itemsets in the
-// dataset This array contains only unique itemsets, and each itemset has a
-// count and support associated with it Master process generates association
+
+// At this point, Master has a hashtable containing all frequent itemsets in the
+// dataset. This contains only unique itemsets, and each itemset has a
+// count and support associated with it. Master process generates association
 // rules from the itemsets
 if (rank == 0) {
   phase_start = MPI_Wtime();
