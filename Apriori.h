@@ -1,5 +1,4 @@
 #include "dynamic_hash_table.h"
-#include "rules-aux.h"
 
 #ifndef MYSTRUCT_H
 #define MYSTRUCT_H
@@ -20,12 +19,12 @@ typedef struct {
 
 // Structure to represent an association rule
 typedef struct {
-  int *antecedent;     // Items in the "if" part of the rule
-  int antecedent_size; // Number of items in the antecedent
-  int *consequent;     // Items in the "then" part of the rule
-  int consequent_size; // Number of items in the consequent
-  float confidence;    // Confidence of the rule (conditional probability)
-  float support;       // Support of the rule (joint probability)
+  int *antecedent;      // Items in the "if" part of the rule
+  int antecedent_size;  // Number of items in the antecedent
+  int *consequent;      // Items in the "then" part of the rule
+  int consequent_size;  // Number of items in the consequent
+  float confidence;     // Confidence of the rule (conditional probability)
+  float support;        // Support of the rule (joint probability)
 } AssociationRule;
 
 #endif
@@ -41,14 +40,9 @@ static inline int get_triangle_index(int i, int j, int n);
 // Helper functions
 int contains_item(int item, int *array, int size);
 float find_itemset_support(ItemSet *itemsets, int count, int *items, int size);
-float find_itemset_support_fixed(ItemSet *itemsets, int count, int *items,
-                                 int size);
-int **get_all_subsets(int *set, int set_size, int subset_size, int *count);
-int *get_complement(int *set, int set_size, int *subset, int subset_size,
-                    int *result_size);
-AssociationRule generate_rules_fixed(ItemSet *itemsets, int itemset_count,
-                                     float min_confidence, int *rule_count,
-                                     ItemHashTable *unique_itemsets);
+float find_itemset_support_fixed(ItemSet *itemsets, int count, int *items, int size);
+int** get_all_subsets(int *set, int set_size, int subset_size, int *count);
+int* get_complement(int *set, int set_size, int *subset, int subset_size, int *result_size);
 
 // Function to free memory allocated for association rules
 void free_rules(AssociationRule *rules, int rule_count);
