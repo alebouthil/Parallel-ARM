@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
       if (frequent_items != NULL) {
         if (outcount >= 2) {
           check_pairs(local_tri, frequent_items, outcount);
-          pairs_generated = 1;
+          pairs_generated += out;
         }
 
         free(frequent_items);
@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
   metrics.pair_generation_time = MPI_Wtime() - phase_start;
 
   if (pairs_generated) {
-    printf("Proc %i: Pairs generated\n", rank);
+    printf("Proc %i: %d Pairs generated\n", rank, );
   } else {
     printf("Proc %i: No pairs were generated\n", rank);
   }
