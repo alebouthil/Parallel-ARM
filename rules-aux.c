@@ -1,4 +1,5 @@
 #include "Apriori.h"
+#include "itemset_hash_table.h"
 #include "map_lookup.c"
 #include <stdlib.h>
 #include <string.h>
@@ -156,17 +157,17 @@ void print_rule(AssociationRule rule) {
 }
 
 void print_text_rule(AssociationRule rule) {
-load_map("map.txt");
+  load_map("map.txt");
   printf("{");
   for (int i = 0; i < rule.antecedent_size; i++) {
-    printf("%s",get_item_name(rule.antecedent[i]));
+    printf("%s", get_item_name(rule.antecedent[i]));
     if (i < rule.antecedent_size - 1) {
       printf(", ");
     }
   }
   printf("} => {");
   for (int i = 0; i < rule.consequent_size; i++) {
-    printf("%s",get_item_name(rule.consequent[i]));
+    printf("%s", get_item_name(rule.consequent[i]));
     if (i < rule.consequent_size - 1) {
       printf(", ");
     }
@@ -221,7 +222,8 @@ float find_itemset_support_fixed(ItemSet *itemsets, int count, int *items,
 
 // Generate improved association rules from an array of frequent itemsets
 AssociationRule *generate_rules_fixed(ItemSet *itemsets, int itemset_count,
-                                      float min_confidence, int *rule_count) {
+                                      float min_confidence, int *rule_count,
+                                      ItemHashTable *unique_itemsets) {
   // Initial allocation for rules
   int max_rules = 1000; // We'll reallocate as needed
   AssociationRule *rules =
@@ -238,6 +240,7 @@ AssociationRule *generate_rules_fixed(ItemSet *itemsets, int itemset_count,
     ItemSet itemset = itemsets[i];
 
     // Skip itemsets of size 1 (can't form rules)
+    // Should never recieve a size 1, but can't hurt
     if (itemset.size < 2) {
       continue;
     }
@@ -247,144 +250,134 @@ AssociationRule *generate_rules_fixed(ItemSet *itemsets, int itemset_count,
     if (full_support <= 0)
       continue; // Skip itemsets with invalid support
 
-    // Debug output
-    if (i < 5) { // Just show first few for debugging
-      printf("DEBUG: Itemset %d with support %.4f: {", i, full_support);
-      for (int j = 0; j < itemset.size; j++) {
-        printf("%d", itemset.elements[j]);
-        if (j < itemset.size - 1)
-          printf(", ");
-      }
-      printf("}\n");
-    }
+    // Generate antecedents
+    int antecedent_size = itemset.size - 1;
+    // Generate all possible antecedents of this size
+    int subset_count;
+    int **antecedents = get_all_subsets(itemset.elements, itemset.size,
+                                        antecedent_size, &subset_count);
+    if (antecedents == NULL)
+      continue;
 
-    // Generate all possible antecedent sizes (from 1 to size-1)
-    for (int antecedent_size = 1; antecedent_size < itemset.size;
-         antecedent_size++) {
-      // Generate all possible antecedents of this size
-      int subset_count;
-      int **antecedents = get_all_subsets(itemset.elements, itemset.size,
-                                          antecedent_size, &subset_count);
-      if (antecedents == NULL)
+    // For each antecedent, create a rule
+    for (int j = 0; j < subset_count; j++) {
+      int *antecedent = antecedents[j];
+      if (antecedent == NULL)
         continue;
 
-      // For each antecedent, create a rule
-      for (int j = 0; j < subset_count; j++) {
-        int *antecedent = antecedents[j];
-        if (antecedent == NULL)
-          continue;
+      // Find the complement of the antecedent (the consequent)
+      int consequent_size;
+      int *consequent =
+          get_complement(itemset.elements, itemset.size, antecedent,
+                         antecedent_size, &consequent_size);
+      if (consequent == NULL)
+        continue;
 
-        // Find the complement of the antecedent (the consequent)
-        int consequent_size;
-        int *consequent =
-            get_complement(itemset.elements, itemset.size, antecedent,
-                           antecedent_size, &consequent_size);
-        if (consequent == NULL)
-          continue;
+      // Find the support of the antecedent using the hashtable
+      IntArray antecedent_array;
+      antecedent_array.length = antecedent_size;
+      antecedent_array.items = antecedent;
+      float antecedent_support =
+          get_support_itemset(unique_itemsets, &antecedent_array);
 
-        // Find the support of the antecedent
-        float antecedent_support = find_itemset_support_fixed(
-            itemsets, itemset_count, antecedent, antecedent_size);
-
-        // Skip if antecedent support is zero or very small to avoid division by
-        // zero
-        if (antecedent_support < 0.000001) {
-          if (consequent != NULL)
-            free(consequent);
-          continue;
-        }
-
-        // Calculate confidence = support(X ∪ Y) / support(X)
-        float confidence = full_support / antecedent_support;
-
-        // Clamp confidence to valid range
-        if (confidence > 1.0)
-          confidence = 1.0;
-
-        // If confidence meets or exceeds threshold, add to rules
-        if (confidence >= min_confidence) {
-          // Resize if needed
-          if (*rule_count >= max_rules) {
-            max_rules *= 2;
-            AssociationRule *temp = (AssociationRule *)realloc(
-                rules, max_rules * sizeof(AssociationRule));
-            if (temp == NULL) {
-              printf("Memory reallocation failed in generate_rules_fixed\n");
-              // Clean up
-              free(consequent);
-              for (int k = 0; k < *rule_count; k++) {
-                if (rules[k].antecedent != NULL)
-                  free(rules[k].antecedent);
-                if (rules[k].consequent != NULL)
-                  free(rules[k].consequent);
-              }
-              free(rules);
-              *rule_count = 0;
-              return NULL;
-            }
-            rules = temp;
-          }
-
-          // Add the rule
-          rules[*rule_count].antecedent =
-              (int *)malloc(antecedent_size * sizeof(int));
-          if (rules[*rule_count].antecedent == NULL) {
-            printf("Memory allocation failed for antecedent\n");
-            free(consequent);
-            continue;
-          }
-          memcpy(rules[*rule_count].antecedent, antecedent,
-                 antecedent_size * sizeof(int));
-          rules[*rule_count].antecedent_size = antecedent_size;
-
-          rules[*rule_count].consequent =
-              (int *)malloc(consequent_size * sizeof(int));
-          if (rules[*rule_count].consequent == NULL) {
-            printf("Memory allocation failed for consequent\n");
-            free(rules[*rule_count].antecedent);
-            free(consequent);
-            continue;
-          }
-          memcpy(rules[*rule_count].consequent, consequent,
-                 consequent_size * sizeof(int));
-          rules[*rule_count].consequent_size = consequent_size;
-
-          rules[*rule_count].confidence = confidence;
-          rules[*rule_count].support = full_support;
-
-          (*rule_count)++;
-
-          // Debug output for the first few rules
-          if (*rule_count <= 5) {
-            printf("DEBUG: Created rule with conf=%.4f, sup=%.4f: {",
-                   confidence, full_support);
-            for (int k = 0; k < antecedent_size; k++) {
-              printf("%d", antecedent[k]);
-              if (k < antecedent_size - 1)
-                printf(", ");
-            }
-            printf("} => {");
-            for (int k = 0; k < consequent_size; k++) {
-              printf("%d", consequent[k]);
-              if (k < consequent_size - 1)
-                printf(", ");
-            }
-            printf("}\n");
-          }
-        }
-
+      // Skip if antecedent support is zero or very small to avoid division by
+      // zero
+      if (antecedent_support < 0.000001) {
         if (consequent != NULL)
           free(consequent);
+        continue;
       }
 
-      // Free memory for antecedents
-      for (int j = 0; j < subset_count; j++) {
-        if (antecedents[j] != NULL)
-          free(antecedents[j]);
+      // Calculate confidence = support(X ∪ Y) / support(X)
+      float confidence = full_support / antecedent_support;
+
+      // Clamp confidence to valid range
+      if (confidence > 1.0)
+        confidence = 1.0;
+
+      // If confidence meets or exceeds threshold, add to rules
+      if (confidence >= min_confidence) {
+        // Resize if needed
+        if (*rule_count >= max_rules) {
+          max_rules *= 2;
+          AssociationRule *temp = (AssociationRule *)realloc(
+              rules, max_rules * sizeof(AssociationRule));
+          if (temp == NULL) {
+            printf("Memory reallocation failed in generate_rules_fixed\n");
+            // Clean up
+            free(consequent);
+            for (int k = 0; k < *rule_count; k++) {
+              if (rules[k].antecedent != NULL)
+                free(rules[k].antecedent);
+              if (rules[k].consequent != NULL)
+                free(rules[k].consequent);
+            }
+            free(rules);
+            *rule_count = 0;
+            return NULL;
+          }
+          rules = temp;
+        }
+
+        // Add the rule
+        rules[*rule_count].antecedent =
+            (int *)malloc(antecedent_size * sizeof(int));
+        if (rules[*rule_count].antecedent == NULL) {
+          printf("Memory allocation failed for antecedent\n");
+          free(consequent);
+          continue;
+        }
+        memcpy(rules[*rule_count].antecedent, antecedent,
+               antecedent_size * sizeof(int));
+        rules[*rule_count].antecedent_size = antecedent_size;
+
+        rules[*rule_count].consequent =
+            (int *)malloc(consequent_size * sizeof(int));
+        if (rules[*rule_count].consequent == NULL) {
+          printf("Memory allocation failed for consequent\n");
+          free(rules[*rule_count].antecedent);
+          free(consequent);
+          continue;
+        }
+        memcpy(rules[*rule_count].consequent, consequent,
+               consequent_size * sizeof(int));
+        rules[*rule_count].consequent_size = consequent_size;
+
+        rules[*rule_count].confidence = confidence;
+        rules[*rule_count].support = full_support;
+
+        (*rule_count)++;
+
+        // Debug output for the first few rules
+        if (*rule_count <= 5) {
+          printf("DEBUG: Created rule with conf=%.4f, sup=%.4f: {", confidence,
+                 full_support);
+          for (int k = 0; k < antecedent_size; k++) {
+            printf("%d", antecedent[k]);
+            if (k < antecedent_size - 1)
+              printf(", ");
+          }
+          printf("} => {");
+          for (int k = 0; k < consequent_size; k++) {
+            printf("%d", consequent[k]);
+            if (k < consequent_size - 1)
+              printf(", ");
+          }
+          printf("}\n");
+        }
       }
-      if (antecedents != NULL)
-        free(antecedents);
+
+      if (consequent != NULL)
+        free(consequent);
     }
+
+    // Free memory for antecedents
+    for (int j = 0; j < subset_count; j++) {
+      if (antecedents[j] != NULL)
+        free(antecedents[j]);
+    }
+    if (antecedents != NULL)
+      free(antecedents);
   }
 
   // Trim the rules array to the actual size
