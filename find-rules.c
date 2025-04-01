@@ -615,12 +615,12 @@ int main(int argc, char **argv) {
   // Place unique itemsets into hashtable to allow for o(1) support lookup when
   // making rules
   ItemHashTable unique_itemsets;
-  init_item_table(unique_itemsets);
+  init_item_table(&unique_itemsets);
 
   for (int i = 0; i < total_all_itemsets; i++) {
     IntArray *key = malloc(sizeof(IntArray));
-    key.length = global_itemsets[i].size;
-    key.items = malloc(key->length * sizeof(int));
+    key->length = global_itemsets[i].size;
+    key->items = malloc(key->length * sizeof(int));
 
     for (int j = 0; j < global_itemsets[i].size; j++) {
       key.items[j] = global_itemsets[i].elements[j];

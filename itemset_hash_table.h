@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define INITIAL_TABLE_SIZE 1000
+#define ITEM_INITIAL_TABLE_SIZE 1000
 #define LOAD_FACTOR 0.75
 
 // A reimplimenrtation of dynamic_hash_table.c

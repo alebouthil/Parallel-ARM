@@ -44,11 +44,5 @@ float find_itemset_support_fixed(ItemSet *itemsets, int count, int *items, int s
 int** get_all_subsets(int *set, int set_size, int subset_size, int *count);
 int* get_complement(int *set, int set_size, int *subset, int subset_size, int *result_size);
 
-// Rule generation functions
-AssociationRule *generate_rules(ItemSet *itemsets, int itemset_count, 
-                              float min_confidence, int *rule_count);
-AssociationRule *generate_rules_fixed(ItemSet *itemsets, int itemset_count, 
-                                   float min_confidence, int *rule_count);
-
 // Function to free memory allocated for association rules
 void free_rules(AssociationRule *rules, int rule_count);

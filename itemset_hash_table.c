@@ -9,7 +9,7 @@ void init_item_table(ItemHashTable *table) {
     return;
   }
 
-  table->size = INITIAL_TABLE_SIZE;
+  table->size = ITEM_INITIAL_TABLE_SIZE;
   table->count = 0;
   table->entries = calloc(table->size, sizeof(ItemHashEntry));
   if (table->entries == NULL) {
