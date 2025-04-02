@@ -43,6 +43,7 @@ ItemSet *generate_candidate(ItemSet *itemset1, ItemSet *itemset2, int k) {
   // Add the two different elements at the end
   candidate->elements[k - 1] = itemset1->elements[k - 1];
   candidate->elements[k] = itemset2->elements[k - 1];
+  candidate->count = 0;
 
   return candidate;
 }
