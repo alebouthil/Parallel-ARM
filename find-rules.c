@@ -212,15 +212,15 @@ int main(int argc, char **argv) {
   }
 
   // Initialize array for storing all frequent itemsets (pairs, triples, etc.)
-  ItemSet *all_frequent_itemsets = NULL;
+  ItemSet *local_frequent_itemsets = NULL;
   int total_itemsets = 0;
   int max_itemsets = 0;
 
   // Only allocate and copy if there are valid pairs
   if (valid_pairs > 0) {
     max_itemsets = valid_pairs * 10; // Initial guess
-    all_frequent_itemsets = malloc(max_itemsets * sizeof(ItemSet));
-    if (all_frequent_itemsets == NULL) {
+    local_frequent_itemsets = malloc(max_itemsets * sizeof(ItemSet));
+    if (local_frequent_itemsets == NULL) {
       printf("Memory allocation failed for all_frequent_itemsets\n");
       // Clean up and continue with empty set
       if (frequent_pairs != NULL) {
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
     } else {
       // Copy the frequent pairs to the all_frequent_itemsets array
       for (int i = 0; i < valid_pairs; i++) {
-        all_frequent_itemsets[total_itemsets++] = frequent_pairs[i];
+        local_frequent_itemsets[total_itemsets++] = frequent_pairs[i];
       }
 
       // Debug: Print some of the frequent pairs
@@ -281,11 +281,11 @@ int main(int argc, char **argv) {
       // 1. Generate candidate itemsets of size k+1
       for (int i = prev_start_idx; i < prev_start_idx + prev_count - 1; i++) {
         for (int j = i + 1; j < prev_start_idx + prev_count; j++) {
-          ItemSet *candidate = generate_candidate(&all_frequent_itemsets[i],
-                                                  &all_frequent_itemsets[j], k);
+          ItemSet *candidate = generate_candidate(
+              &local_frequent_itemsets[i], &local_frequent_itemsets[j], k);
 
           if (candidate != NULL) {
-            if (has_frequent_subsets(candidate, all_frequent_itemsets,
+            if (has_frequent_subsets(candidate, local_frequent_itemsets,
                                      total_itemsets, k)) {
               // Add the candidate to our list
               ItemSet *temp =
@@ -396,7 +396,7 @@ int main(int argc, char **argv) {
         max_itemsets =
             (total_itemsets + new_count) * 2; // More aggressive resizing
         ItemSet *temp =
-            realloc(all_frequent_itemsets, max_itemsets * sizeof(ItemSet));
+            realloc(local_frequent_itemsets, max_itemsets * sizeof(ItemSet));
         if (temp == NULL) {
           printf("Memory reallocation failed for all_frequent_itemsets\n");
           // Clean up retained itemsets
@@ -411,12 +411,12 @@ int main(int argc, char **argv) {
           candidates = NULL;
           break;
         }
-        all_frequent_itemsets = temp;
+        local_frequent_itemsets = temp;
       }
 
       // Copy the retained itemsets to all_frequent_itemsets
       for (int i = 0; i < new_count; i++) {
-        all_frequent_itemsets[total_itemsets + i] = retained_itemsets[i];
+        local_frequent_itemsets[total_itemsets + i] = retained_itemsets[i];
       }
       total_itemsets += new_count;
 
@@ -486,8 +486,8 @@ int main(int argc, char **argv) {
 
     if (total_all_itemsets > 0) {
       // Reuse local_itemsets array as the base of global_itemsets
-      global_itemsets =
-          realloc(all_frequent_itemsets, total_all_itemsets * sizeof(ItemSet));
+      global_itemsets = realloc(local_frequent_itemsets,
+                                total_all_itemsets * sizeof(ItemSet));
       if (global_itemsets == NULL) {
         fprintf(stderr, "Failed to realloc global_itemsets\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
@@ -599,14 +599,14 @@ int main(int argc, char **argv) {
   } else if (total_itemsets > 0) {
     // Worker processes send their itemsets
     for (int i = 0; i < total_itemsets; i++) {
-      MPI_Send(&all_frequent_itemsets[i].size, 1, MPI_INT, 0, 0,
+      MPI_Send(&local_frequent_itemsets[i].size, 1, MPI_INT, 0, 0,
                MPI_COMM_WORLD);
-      MPI_Send(&all_frequent_itemsets[i].support, 1, MPI_FLOAT, 0, 1,
+      MPI_Send(&local_frequent_itemsets[i].support, 1, MPI_FLOAT, 0, 1,
                MPI_COMM_WORLD);
-      MPI_Send(&all_frequent_itemsets[i].count, 1, MPI_INT, 0, 2,
+      MPI_Send(&local_frequent_itemsets[i].count, 1, MPI_INT, 0, 2,
                MPI_COMM_WORLD);
-      MPI_Send(all_frequent_itemsets[i].elements, all_frequent_itemsets[i].size,
-               MPI_INT, 0, 3, MPI_COMM_WORLD);
+      MPI_Send(local_frequent_itemsets[i].elements,
+               local_frequent_itemsets[i].size, MPI_INT, 0, 3, MPI_COMM_WORLD);
     }
   }
 
@@ -616,7 +616,9 @@ int main(int argc, char **argv) {
     ItemHashTable unique_itemsets;
     init_item_table(&unique_itemsets);
     for (int i = 0; i < total_all_itemsets; i++) {
-      printf("Have itemset size %d count %d support %f \n" global_itemsets[i].size, global_itemsets[i].count, global_itemsets[i].support);
+      printf(
+          "Have itemset size %d count %d support %f \n" global_itemsets[i].size,
+          global_itemsets[i].count, global_itemsets[i].support);
       IntArray *key = malloc(sizeof(IntArray));
       key->length = global_itemsets[i].size;
       key->items = malloc(key->length * sizeof(int));
@@ -783,15 +785,15 @@ int main(int argc, char **argv) {
 
   // Clean up all resources before MPI_Finalize
   // First, clean up local resources with thorough null checks
-  if (all_frequent_itemsets != NULL) {
+  if (local_frequent_itemsets != NULL) {
     for (int i = 0; i < total_itemsets; i++) {
-      if (all_frequent_itemsets[i].elements != NULL) {
-        free(all_frequent_itemsets[i].elements);
-        all_frequent_itemsets[i].elements = NULL;
+      if (local_frequent_itemsets[i].elements != NULL) {
+        free(local_frequent_itemsets[i].elements);
+        local_frequent_itemsets[i].elements = NULL;
       }
     }
-    free(all_frequent_itemsets);
-    all_frequent_itemsets = NULL;
+    free(local_frequent_itemsets);
+    local_frequent_itemsets = NULL;
   }
 
   // Free frequent_pairs array if it was allocated
