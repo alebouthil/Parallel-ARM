@@ -616,6 +616,7 @@ int main(int argc, char **argv) {
     ItemHashTable unique_itemsets;
     init_item_table(&unique_itemsets);
     for (int i = 0; i < total_all_itemsets; i++) {
+      printf("Have itemset size %d count %d support %f \n" global_itemsets[i].size, global_itemsets[i].count, global_itemsets[i].support);
       IntArray *key = malloc(sizeof(IntArray));
       key->length = global_itemsets[i].size;
       key->items = malloc(key->length * sizeof(int));
