@@ -2,5 +2,7 @@ datasets
 final
 jobscript.sh
 ds4_numeric.txt
-
-temp.c
+cmake_install.cmake
+CMakeFiles
+CMakeCache.txt
+compile_commands.json
