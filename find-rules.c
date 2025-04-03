@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
               argv[0]);
     return 1;
   }
+
   float global_support = strtof(argv[2], NULL);
   float confidence_threshold = strtof(argv[3], NULL);
   int text = strtol(argv[4], NULL, 10);
@@ -107,7 +108,7 @@ int main(int argc, char **argv) {
 
   if (rank == 0) {
     printf("#################### \n");
-    printf("Total of %i transactions found \n", total_transactions);
+    printf("Total of %i lines found \n", total_transactions);
     printf("Total of %i frequent items found (not unique)\n",
            total_frequent_items);
     printf("#################### \n");
@@ -234,7 +235,7 @@ int main(int argc, char **argv) {
       }
       valid_pairs = 0;
     } else {
-      // Copy the frequent pairs to the all_frequent_itemsets array
+      // Copy the frequent pairs to the local_frequent_itemsets array
       for (int i = 0; i < valid_pairs; i++) {
         local_frequent_itemsets[total_itemsets++] = frequent_pairs[i];
       }
@@ -271,167 +272,6 @@ int main(int argc, char **argv) {
       fseek(fp, read_start, SEEK_SET);
     } else {
       rewind(fp);
-    }
-
-    while (prev_count > 0) {
-      //      int new_start_idx = total_itemsets;
-      int candidates_count = 0;
-      ItemSet *candidates = NULL;
-
-      // 1. Generate candidate itemsets of size k+1
-      for (int i = prev_start_idx; i < prev_start_idx + prev_count - 1; i++) {
-        for (int j = i + 1; j < prev_start_idx + prev_count; j++) {
-          ItemSet *candidate = generate_candidate(
-              &local_frequent_itemsets[i], &local_frequent_itemsets[j], k);
-
-          if (candidate != NULL) {
-            if (has_frequent_subsets(candidate, local_frequent_itemsets,
-                                     total_itemsets, k)) {
-              // Add the candidate to our list
-              ItemSet *temp =
-                  realloc(candidates, (candidates_count + 1) * sizeof(ItemSet));
-              if (temp == NULL) {
-                printf("Memory reallocation failed for candidates\n");
-                // Free current candidate since we couldn't add it
-                free(candidate->elements);
-                free(candidate);
-                // Don't abort, just use what we have
-                break;
-              }
-              candidates = temp;
-              candidates[candidates_count].size = candidate->size;
-              candidates[candidates_count].support = candidate->support;
-              candidates[candidates_count].elements = candidate->elements;
-              candidates[candidates_count].count = candidate->count;
-              candidates_count++;
-              free(candidate); // Free the container, but not the elements
-                               // (copied above)
-            } else {
-              // Free candidate that doesn't have frequent subsets
-              free(candidate->elements);
-              free(candidate);
-            }
-          }
-        }
-      }
-
-      if (candidates_count == 0) {
-        if (candidates != NULL) {
-          free(candidates);
-          candidates = NULL;
-        }
-        break; // No new candidates, we're done
-      }
-
-      // Debug: Print number of candidates
-      printf("Proc %i: Generated %d candidate itemsets of size %d\n", rank,
-             candidates_count, k + 1);
-
-      // 2. Count support for each candidate
-      // Reset file pointer to read the chunk again
-      fseek(fp, read_start, SEEK_SET);
-
-      while (ftell(fp) < read_end &&
-             fgets(buffer, sizeof(buffer), fp) != NULL) {
-        int outcount;
-        int *frequent_items = extract_frequent(&local_table, buffer, &outcount);
-
-        if (frequent_items != NULL) {
-          if (outcount >= k + 1) {
-            for (int i = 0; i < candidates_count; i++) {
-              if (is_subset(candidates[i].elements, candidates[i].size,
-                            frequent_items, outcount)) {
-                candidates[i].count += 1;
-                candidates[i].support =
-                    (float)candidates[i].count / local_transaction_count;
-              }
-            }
-          }
-
-          free(frequent_items);
-          frequent_items = NULL;
-        }
-      }
-
-      // 3. Prune candidates based on support
-      int new_count = 0;
-      float local_support = global_support * ((float)local_transaction_count /
-                                              total_transactions);
-
-      // Create a temporary array to hold the retained itemsets
-      ItemSet *retained_itemsets = malloc(candidates_count * sizeof(ItemSet));
-      if (retained_itemsets == NULL) {
-        printf("Memory allocation failed for retained_itemsets\n");
-        // Clean up candidates memory
-        for (int i = 0; i < candidates_count; i++) {
-          if (candidates[i].elements != NULL) {
-            free(candidates[i].elements);
-            candidates[i].elements = NULL;
-          }
-        }
-        free(candidates);
-        candidates = NULL;
-        break;
-      }
-
-      for (int i = 0; i < candidates_count; i++) {
-        if (candidates[i].support >= local_support) {
-          // Copy the item to retained itemsets
-          retained_itemsets[new_count].size = candidates[i].size;
-          retained_itemsets[new_count].support = candidates[i].support;
-          retained_itemsets[new_count].elements = candidates[i].elements;
-          retained_itemsets[new_count].count = candidates[i].count;
-          new_count++;
-        } else {
-          // Free memory for non-frequent candidates
-          if (candidates[i].elements != NULL) {
-            free(candidates[i].elements);
-            candidates[i].elements = NULL;
-          }
-        }
-      }
-
-      // Check if we need to resize all_frequent_itemsets
-      if (total_itemsets + new_count >= max_itemsets) {
-        max_itemsets =
-            (total_itemsets + new_count) * 2; // More aggressive resizing
-        ItemSet *temp =
-            realloc(local_frequent_itemsets, max_itemsets * sizeof(ItemSet));
-        if (temp == NULL) {
-          printf("Memory reallocation failed for all_frequent_itemsets\n");
-          // Clean up retained itemsets
-          for (int i = 0; i < new_count; i++) {
-            if (retained_itemsets[i].elements != NULL) {
-              free(retained_itemsets[i].elements);
-              retained_itemsets[i].elements = NULL;
-            }
-          }
-          free(retained_itemsets);
-          free(candidates);
-          candidates = NULL;
-          break;
-        }
-        local_frequent_itemsets = temp;
-      }
-
-      // Copy the retained itemsets to all_frequent_itemsets
-      for (int i = 0; i < new_count; i++) {
-        local_frequent_itemsets[total_itemsets + i] = retained_itemsets[i];
-      }
-      total_itemsets += new_count;
-
-      // Update for next iteration
-      prev_start_idx = total_itemsets - new_count;
-      prev_count = new_count;
-      k++;
-
-      // Free temporary arrays (but not the elements that were moved)
-      free(retained_itemsets);
-      free(candidates);
-      candidates = NULL;
-
-      printf("Proc %i: Found %d frequent itemsets of size %d\n", rank,
-             new_count, k);
     }
 
     // Close file after larger itemset discovery
